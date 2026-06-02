@@ -1,0 +1,17 @@
+# Virtuelle Umgebung -- nie ins Git!
+.venv/
+
+# Konfigurationsdatei (kann Zugangsdaten enthalten)
+.env
+
+# Python-Bytecode (automatisch generiert)
+__pycache__/
+*.pyc
+*.pyo
+
+# Datenbankdatei (enthaelt Nutzerdaten)
+*.db
+
+# Betriebssystem-Hilfsdateien
+.DS_Store
+Thumbs.db
