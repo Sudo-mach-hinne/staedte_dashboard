@@ -13,10 +13,10 @@ Datum: 2. Juni 2026
 import streamlit as st
 
 # Seitentitel und Layout festlegen
-st.set_page_config(page_title="Mein Projekt", layout="wide")
+st.set_page_config(page_title="Städte-Wetter Dashboard", layout="wide")
 
 # Hauptueberschrift
-st.title("Hallo, Streamlit!")
+st.title("Willkommen beim Städte-Wetter Dashboard!")
 
 # Einfache Eingabe
 name = st.text_input("Wie heißen Sie?", placeholder="Ihr Name")
