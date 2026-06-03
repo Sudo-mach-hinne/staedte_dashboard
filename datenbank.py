@@ -4,6 +4,12 @@ Beschreibung: SQLite-Zugriff
 Autor: Anne-Katrin Dittmann
 Datum: 2. Juni 2026
 """
+import os
+
+DB_PFAD = "daten/projekt.db"
+
+# Ordner anlegen falls nicht vorhanden
+os.makedirs("daten", exist_ok=True)
 
 import sqlite3
 from contextlib import closing
