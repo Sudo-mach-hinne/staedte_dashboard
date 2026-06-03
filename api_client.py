@@ -103,7 +103,48 @@ def prognose_abrufen(breitengrad, laengengrad, tage=7):
     except (KeyError, ValueError):
         raise RuntimeError("Unerwartete Antwort der API.")
 
+def koordinaten_abrufen(stadtname):
+    """
+    Ruft Koordinaten fuer einen Stadtnamen ueber die Open-Meteo Geocoding API ab.
 
+    Parameter:
+        stadtname (str): Name der Stadt
+
+    Rueckgabe:
+        dict mit den Feldern:
+            name (str)
+            land (str)
+            breitengrad (float)
+            laengengrad (float)
+        oder RuntimeError wenn Stadt nicht gefunden
+    """
+    url = "https://geocoding-api.open-meteo.com/v1/search"
+    params = {
+        "name": stadtname,
+        "count": 1,
+        "language": "de",
+        "format": "json",
+    }
+    try:
+        antwort = requests.get(url, params=params, timeout=10)
+        antwort.raise_for_status()
+        daten = antwort.json()
+        if not daten.get("results"):
+            raise RuntimeError(f"Stadt '{stadtname}' nicht gefunden.")
+        ergebnis = daten["results"][0]
+        return {
+            "name": ergebnis["name"],
+            "land": ergebnis.get("country", ""),
+            "breitengrad": ergebnis["latitude"],
+            "laengengrad": ergebnis["longitude"],
+        }
+    except requests.exceptions.Timeout:
+        raise RuntimeError("Geocoding-API antwortet nicht (Timeout).")
+    except requests.exceptions.ConnectionError:
+        raise RuntimeError("Keine Internetverbindung.")
+    except requests.exceptions.HTTPError as fehler:
+        raise RuntimeError(f"API-Fehler: {fehler.response.status_code}")
+    
 if __name__ == "__main__":
     print("Test: Aktuelles Wetter Leipzig")
     wetter = wetter_aktuell_abrufen(51.34, 12.37)

@@ -5,6 +5,21 @@ Autor: Anne-Katrin Dittmann
 Datum: 2. Juni 2026
 """
 import pandas as pd
+
+def stadt_einfuegen(name, land, lat, lon):
+    """Speichert eine neue Stadt. Gibt die id der neuen oder bestehenden Zeile zurueck."""
+    with closing(sqlite3.connect(DB_PFAD)) as verbindung:
+        verbindung.execute(
+            "INSERT OR IGNORE INTO staedte (name, land, breitengrad, laengengrad) "
+            "VALUES (?, ?, ?, ?)",
+            (name, land, lat, lon)
+        )
+        verbindung.commit()
+        ergebnis = verbindung.execute(
+            "SELECT id FROM staedte WHERE name = ?", (name,)
+        ).fetchone()
+        return ergebnis[0] if ergebnis else None
+
 def durchschnittstemperatur(wetterdaten):
     """
     Berechnet die Durchschnittstemperatur aus gespeicherten Wetterdaten.
@@ -50,9 +65,8 @@ def staedte_vergleich(staedte_daten):
             prognose (list) -- Liste von Dicts aus datenbank.prognose_nach_stadt()
 
     Rueckgabe:
-        pandas DataFrame mit einer Zeile pro Stadt und den Spalten:
-            name, durchschnitt_max, durchschnitt_min, gesamtniederschlag
-        Sortiert nach durchschnitt_max absteigend.
+        pandas DataFrame mit einer Zeile pro Stadt.
+        Sortiert nach Durchschnittstemperatur Max absteigend.
     """
     ergebnis = []
     for eintrag in staedte_daten:
@@ -63,13 +77,13 @@ def staedte_vergleich(staedte_daten):
         df = pd.DataFrame(prognose)
         ergebnis.append({
             "name": name,
-            "durchschnitt_max": round(df["temperatur_max"].mean(), 2),
-            "durchschnitt_min": round(df["temperatur_min"].mean(), 2),
-            "gesamtniederschlag": round(df["niederschlag"].sum(), 2),
+            "Ø Temperatur Max (°C)": round(df["temperatur_max"].mean(), 2),
+            "Ø Temperatur Min (°C)": round(df["temperatur_min"].mean(), 2),
+            "Gesamtniederschlag (mm)": round(df["niederschlag"].sum(), 2),
         })
     if not ergebnis:
         return pd.DataFrame()
-    return pd.DataFrame(ergebnis).sort_values("durchschnitt_max", ascending=False)
+    return pd.DataFrame(ergebnis).sort_values("Ø Temperatur Max (°C)", ascending=False)
 
 
 def prognose_als_dataframe(prognose):
@@ -89,8 +103,27 @@ def prognose_als_dataframe(prognose):
     return df.sort_values("datum").reset_index(drop=True)
 
 
+def wettercode_zu_icon(wettercode):
+    """Gibt einen Weather-Icons CSS-Klassennamen fuer einen WMO-Wettercode zurueck."""
+    if wettercode == 0:
+        return "wi wi-day-sunny"
+    elif wettercode in [1, 2]:
+        return "wi wi-day-cloudy"
+    elif wettercode == 3:
+        return "wi wi-cloudy"
+    elif wettercode in range(51, 68):
+        return "wi wi-rain"
+    elif wettercode in range(71, 78):
+        return "wi wi-snow"
+    elif wettercode in range(80, 83):
+        return "wi wi-showers"
+    elif wettercode in range(95, 100):
+        return "wi wi-thunderstorm"
+    else:
+        return "wi wi-na"
+
+
 if __name__ == "__main__":
-    # Testdaten
     testdaten = [
         {"temperatur": 18.5, "windgeschwindigkeit": 12.3, "niederschlag": 0.0, "wettercode": 1},
         {"temperatur": 21.0, "windgeschwindigkeit": 8.0, "niederschlag": 0.2, "wettercode": 2},
@@ -98,19 +131,3 @@ if __name__ == "__main__":
     ]
     print("Durchschnittstemperatur:", durchschnittstemperatur(testdaten))
     print("Extremwerte:", temperatur_extremwerte(testdaten))
-
-    testprognose_leipzig = [
-        {"datum": "2026-06-04", "temperatur_min": 14.0, "temperatur_max": 22.0, "niederschlag": 0.5, "wettercode": 2},
-        {"datum": "2026-06-05", "temperatur_min": 13.0, "temperatur_max": 20.0, "niederschlag": 1.0, "wettercode": 3},
-    ]
-    testprognose_berlin = [
-        {"datum": "2026-06-04", "temperatur_min": 12.0, "temperatur_max": 19.0, "niederschlag": 2.0, "wettercode": 3},
-        {"datum": "2026-06-05", "temperatur_min": 11.0, "temperatur_max": 18.0, "niederschlag": 0.0, "wettercode": 1},
-    ]
-    vergleich = staedte_vergleich([
-        {"name": "Leipzig", "prognose": testprognose_leipzig},
-        {"name": "Berlin", "prognose": testprognose_berlin},
-    ])
-    print()
-    print("Staedtevergleich:")
-    print(vergleich)
