@@ -232,11 +232,11 @@ else:
             try:
                 # Aktuelles Wetter von Open-Meteo abrufen
                 wetter = api_client.wetter_aktuell_abrufen(
-                    stadt["breitengrad"], stadt["laengengrad"]
+                    stadt["breitengrad"], stadt["laengengrad"], stadtname=stadtname
                 )
                 # 7-Tage-Prognose von Open-Meteo abrufen
                 prognose = api_client.prognose_abrufen(
-                    stadt["breitengrad"], stadt["laengengrad"]
+                    stadt["breitengrad"], stadt["laengengrad"], stadtname=stadtname
                 )
 
                 # Aktuellen Wetterdatensatz in Datenbank speichern
@@ -332,10 +332,10 @@ if len(st.session_state.staedte_liste) > 1:
             continue
         try:
             wetter = api_client.wetter_aktuell_abrufen(
-                stadt["breitengrad"], stadt["laengengrad"]
+                stadt["breitengrad"], stadt["laengengrad"], stadtname=stadtname
             )
             prognose = api_client.prognose_abrufen(
-                stadt["breitengrad"], stadt["laengengrad"]
+                stadt["breitengrad"], stadt["laengengrad"], stadtname=stadtname
             )
             # Sonnigste Stadt = niedrigster aktueller Wettercode
             if wetter["wettercode"] < min_wettercode:

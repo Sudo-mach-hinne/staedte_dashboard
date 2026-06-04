@@ -14,21 +14,85 @@ load_dotenv()
 API_TIMEOUT = int(os.getenv("API_TIMEOUT", 10))
 
 API_URL = "https://api.open-meteo.com/v1/forecast"
+FALLBACK_URL = "https://wttr.in"
 
 
-def wetter_aktuell_abrufen(breitengrad, laengengrad):
+def _wetter_fallback_aktuell(stadtname):
     """
-    Ruft aktuelle Wetterdaten von Open-Meteo ab.
-    
+    Fallback: Ruft aktuelle Wetterdaten von wttr.in ab.
+
     Parameter:
-        breitengrad (float): Breitengrad der Stadt
-        laengengrad (float): Laengengrad der Stadt
-    
+        stadtname (str): Name der Stadt
+
     Rueckgabe:
         dict mit den Feldern:
             temperatur (float)
             windgeschwindigkeit (float)
-            niederschlag (float) -- immer 0.0 bei current_weather
+            niederschlag (float)
+            wettercode (int)
+        oder RuntimeError bei Fehler
+    """
+    url = f"{FALLBACK_URL}/{stadtname}?format=j1"
+    antwort = requests.get(url, timeout=API_TIMEOUT)
+    antwort.raise_for_status()
+    daten = antwort.json()
+    aktuell = daten["current_condition"][0]
+    return {
+        "temperatur": float(aktuell["temp_C"]),
+        "windgeschwindigkeit": float(aktuell["windspeedKmph"]),
+        "niederschlag": float(aktuell["precipMM"]),
+        "wettercode": int(aktuell["weatherCode"]),
+    }
+
+
+def _wetter_fallback_prognose(stadtname, tage=7):
+    """
+    Fallback: Ruft Prognosedaten von wttr.in ab.
+
+    Parameter:
+        stadtname (str): Name der Stadt
+        tage (int): Anzahl der Tage (wttr.in liefert max. 3)
+
+    Rueckgabe:
+        Liste von Dicts je Tag mit:
+            datum (str)
+            temperatur_min (float)
+            temperatur_max (float)
+            niederschlag (float)
+            wettercode (int)
+        oder RuntimeError bei Fehler
+    """
+    url = f"{FALLBACK_URL}/{stadtname}?format=j1"
+    antwort = requests.get(url, timeout=API_TIMEOUT)
+    antwort.raise_for_status()
+    daten = antwort.json()
+    ergebnis = []
+    for tag in daten["weather"][:tage]:
+        ergebnis.append({
+            "datum": tag["date"],
+            "temperatur_min": float(tag["mintempC"]),
+            "temperatur_max": float(tag["maxtempC"]),
+            "niederschlag": float(tag["hourly"][0]["precipMM"]),
+            "wettercode": int(tag["hourly"][0]["weatherCode"]),
+        })
+    return ergebnis
+
+
+def wetter_aktuell_abrufen(breitengrad, laengengrad, stadtname=None):
+    """
+    Ruft aktuelle Wetterdaten von Open-Meteo ab.
+    Bei Fehler: Fallback auf wttr.in (erfordert stadtname).
+
+    Parameter:
+        breitengrad (float): Breitengrad der Stadt
+        laengengrad (float): Laengengrad der Stadt
+        stadtname (str): Name der Stadt (fuer Fallback benoetigt)
+
+    Rueckgabe:
+        dict mit den Feldern:
+            temperatur (float)
+            windgeschwindigkeit (float)
+            niederschlag (float)
             wettercode (int)
         oder RuntimeError bei Fehler
     """
@@ -40,7 +104,7 @@ def wetter_aktuell_abrufen(breitengrad, laengengrad):
         "forecast_days": 1,
     }
     try:
-        antwort = requests.get(API_URL, params=params,timeout=API_TIMEOUT)
+        antwort = requests.get(API_URL, params=params, timeout=API_TIMEOUT)
         antwort.raise_for_status()
         daten = antwort.json()
         wetter = daten["current_weather"]
@@ -50,24 +114,27 @@ def wetter_aktuell_abrufen(breitengrad, laengengrad):
             "niederschlag": 0.0,
             "wettercode": wetter["weathercode"],
         }
-    except requests.exceptions.Timeout:
-        raise RuntimeError("Wetter-API antwortet nicht (Timeout).")
-    except requests.exceptions.ConnectionError:
-        raise RuntimeError("Keine Internetverbindung.")
-    except requests.exceptions.HTTPError as fehler:
-        raise RuntimeError(f"API-Fehler: {fehler.response.status_code}")
-    except (KeyError, ValueError):
-        raise RuntimeError("Unerwartete Antwort der API.")
+    except Exception:
+        if stadtname:
+            try:
+                return _wetter_fallback_aktuell(stadtname)
+            except Exception as fallback_fehler:
+                raise RuntimeError(
+                    f"Beide APIs nicht erreichbar. Fallback-Fehler: {fallback_fehler}"
+                )
+        raise RuntimeError("Wetter-API nicht erreichbar und kein Stadtname fuer Fallback angegeben.")
 
 
-def prognose_abrufen(breitengrad, laengengrad, tage=7):
+def prognose_abrufen(breitengrad, laengengrad, tage=7, stadtname=None):
     """
     Ruft Prognosedaten fuer mehrere Tage von Open-Meteo ab.
+    Bei Fehler: Fallback auf wttr.in (max. 3 Tage, erfordert stadtname).
 
     Parameter:
         breitengrad (float): Breitengrad der Stadt
         laengengrad (float): Laengengrad der Stadt
         tage (int): Anzahl der Prognosetage (Standard: 7)
+        stadtname (str): Name der Stadt (fuer Fallback benoetigt)
 
     Rueckgabe:
         Liste von Dicts, je Tag ein Eintrag mit:
@@ -100,19 +167,21 @@ def prognose_abrufen(breitengrad, laengengrad, tage=7):
                 "wettercode": daily["weathercode"][i],
             })
         return ergebnis
-    except requests.exceptions.Timeout:
-        raise RuntimeError("Wetter-API antwortet nicht (Timeout).")
-    except requests.exceptions.ConnectionError:
-        raise RuntimeError("Keine Internetverbindung.")
-    except requests.exceptions.HTTPError as fehler:
-        raise RuntimeError(f"API-Fehler: {fehler.response.status_code}")
-    except (KeyError, ValueError):
-        raise RuntimeError("Unerwartete Antwort der API.")
+    except Exception:
+        if stadtname:
+            try:
+                return _wetter_fallback_prognose(stadtname, tage)
+            except Exception as fallback_fehler:
+                raise RuntimeError(
+                    f"Beide APIs nicht erreichbar. Fallback-Fehler: {fallback_fehler}"
+                )
+        raise RuntimeError("Prognose-API nicht erreichbar und kein Stadtname fuer Fallback angegeben.")
+
 
 def koordinaten_abrufen(stadtname, count=10):
     """
     Ruft Koordinaten fuer einen Stadtnamen ueber die Open-Meteo Geocoding API ab.
-    Gibt bis zu 5 Treffer zurueck, damit der Nutzer bei Mehrdeutigkeit auswaehlen kann.
+    Gibt bis zu 10 Treffer zurueck, damit der Nutzer bei Mehrdeutigkeit auswaehlen kann.
 
     Parameter:
         stadtname (str): Name der Stadt
@@ -156,13 +225,14 @@ def koordinaten_abrufen(stadtname, count=10):
         raise RuntimeError("Keine Internetverbindung.")
     except requests.exceptions.HTTPError as fehler:
         raise RuntimeError(f"API-Fehler: {fehler.response.status_code}")
-    
+
+
 if __name__ == "__main__":
     print("Test: Aktuelles Wetter Leipzig")
-    wetter = wetter_aktuell_abrufen(51.34, 12.37)
+    wetter = wetter_aktuell_abrufen(51.34, 12.37, stadtname="Leipzig")
     print(wetter)
     print()
     print("Test: Prognose Leipzig (7 Tage)")
-    prognose = prognose_abrufen(51.34, 12.37)
+    prognose = prognose_abrufen(51.34, 12.37, tage=7, stadtname="Leipzig")
     for tag in prognose:
         print(tag)
