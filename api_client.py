@@ -6,6 +6,12 @@ Datum: 2. Juni 2026
 """
 
 import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_TIMEOUT = int(os.getenv("API_TIMEOUT", 10))
 
 API_URL = "https://api.open-meteo.com/v1/forecast"
 
@@ -34,7 +40,7 @@ def wetter_aktuell_abrufen(breitengrad, laengengrad):
         "forecast_days": 1,
     }
     try:
-        antwort = requests.get(API_URL, params=params, timeout=10)
+        antwort = requests.get(API_URL, params=params,timeout=API_TIMEOUT)
         antwort.raise_for_status()
         daten = antwort.json()
         wetter = daten["current_weather"]
@@ -80,7 +86,7 @@ def prognose_abrufen(breitengrad, laengengrad, tage=7):
         "timezone": "Europe/Berlin",
     }
     try:
-        antwort = requests.get(API_URL, params=params, timeout=10)
+        antwort = requests.get(API_URL, params=params, timeout=API_TIMEOUT)
         antwort.raise_for_status()
         daten = antwort.json()
         daily = daten["daily"]
@@ -126,7 +132,7 @@ def koordinaten_abrufen(stadtname):
         "format": "json",
     }
     try:
-        antwort = requests.get(url, params=params, timeout=10)
+        antwort = requests.get(url, params=params, timeout=API_TIMEOUT)
         antwort.raise_for_status()
         daten = antwort.json()
         if not daten.get("results"):
