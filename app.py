@@ -135,7 +135,7 @@ col_input, col_button = st.columns([4, 1])
 with col_input:
     neue_stadt = st.text_input("Stadt hinzufügen", placeholder="z. B. München, Paris, Wien ...")
     # Hinweis für häufige Städtenamen
-    st.caption("💡 Tipp: Bei häufigen Städtenamen einfach präziser suchen — z. B. 'Halle (Saale)' statt 'Halle'.")
+    st.caption("💡 Tipp: Bei häufigen Städtenamen einfach präziser suchen — z. B. 'Halle Saale' statt 'Halle'.")
 with col_button:
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("➕ Hinzufügen"):
