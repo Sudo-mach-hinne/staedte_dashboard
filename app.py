@@ -239,7 +239,7 @@ else:
                     stadt["breitengrad"], stadt["laengengrad"], stadtname=stadtname
                 )
                 if len(prognose) < 7:
-                st.warning("⚠️ API-Server ist scheinbar down, daher Wetterdienst eingeschränkt – Prognose nur für 3 Tage verfügbar.")
+                     st.warning("⚠️ API-Server ist scheinbar down, daher Wetterdienst eingeschränkt – Prognose nur für 3 Tage verfügbar.")
                 # Aktuellen Wetterdatensatz in Datenbank speichern
                 # (baut Verlauf für Durchschnittsberechnung auf)
                 datenbank.wetterdaten_speichern(
