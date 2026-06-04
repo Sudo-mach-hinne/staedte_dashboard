@@ -109,17 +109,20 @@ def prognose_abrufen(breitengrad, laengengrad, tage=7):
     except (KeyError, ValueError):
         raise RuntimeError("Unerwartete Antwort der API.")
 
-def koordinaten_abrufen(stadtname):
+def koordinaten_abrufen(stadtname, count=10):
     """
     Ruft Koordinaten fuer einen Stadtnamen ueber die Open-Meteo Geocoding API ab.
+    Gibt bis zu 5 Treffer zurueck, damit der Nutzer bei Mehrdeutigkeit auswaehlen kann.
 
     Parameter:
         stadtname (str): Name der Stadt
+        count (int): Anzahl der Treffer (Standard: 10)
 
     Rueckgabe:
-        dict mit den Feldern:
+        Liste von Dicts, je Treffer ein Eintrag mit:
             name (str)
             land (str)
+            region (str)
             breitengrad (float)
             laengengrad (float)
         oder RuntimeError wenn Stadt nicht gefunden
@@ -127,7 +130,7 @@ def koordinaten_abrufen(stadtname):
     url = "https://geocoding-api.open-meteo.com/v1/search"
     params = {
         "name": stadtname,
-        "count": 1,
+        "count": count,
         "language": "de",
         "format": "json",
     }
@@ -137,13 +140,16 @@ def koordinaten_abrufen(stadtname):
         daten = antwort.json()
         if not daten.get("results"):
             raise RuntimeError(f"Stadt '{stadtname}' nicht gefunden.")
-        ergebnis = daten["results"][0]
-        return {
-            "name": ergebnis["name"],
-            "land": ergebnis.get("country", ""),
-            "breitengrad": ergebnis["latitude"],
-            "laengengrad": ergebnis["longitude"],
-        }
+        treffer = []
+        for ergebnis in daten["results"]:
+            treffer.append({
+                "name": ergebnis["name"],
+                "land": ergebnis.get("country", ""),
+                "region": ergebnis.get("admin1", ""),
+                "breitengrad": ergebnis["latitude"],
+                "laengengrad": ergebnis["longitude"],
+            })
+        return treffer
     except requests.exceptions.Timeout:
         raise RuntimeError("Geocoding-API antwortet nicht (Timeout).")
     except requests.exceptions.ConnectionError:

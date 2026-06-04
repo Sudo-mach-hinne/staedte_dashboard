@@ -8,7 +8,12 @@ Datum: 2. Juni 2026
 import sqlite3
 from contextlib import closing
 
-DB_PFAD = "daten/projekt.db"
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DB_PFAD = os.getenv("DB_PFAD", "daten/projekt.db")
 
 
 def initialisiere_datenbank():
