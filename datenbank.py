@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DB_PFAD = os.getenv("DB_PFAD", "daten/projekt.db")
-
+os.makedirs("daten", exist_ok=True)
 
 def initialisiere_datenbank():
     """Legt alle Tabellen an, falls sie noch nicht existieren."""
