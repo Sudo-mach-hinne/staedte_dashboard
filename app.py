@@ -80,7 +80,7 @@ datenbank.initialisiere_datenbank()
 # automatisch geladen, damit die App nicht leer
 # erscheint. Liste kann beliebig angepasst werden.
 # ─────────────────────────────────────────────
-BEISPIELSTAEDTE = ["Leipzig", "Berlin", "Hamburg"]
+BEISPIELSTAEDTE = ["Leipzig", "Tokio", "Prag"]
 
 # ─────────────────────────────────────────────
 # SESSION STATE -- STÄDTELISTE
@@ -133,7 +133,7 @@ st.title("🌍 City Weather Dashboard")
 # ─────────────────────────────────────────────
 col_input, col_button = st.columns([4, 1])
 with col_input:
-    neue_stadt = st.text_input("Stadt hinzufügen", placeholder="z. B. München, Paris, Wien ...")
+    neue_stadt = st.text_input("Füge Städte hinzu, vergleiche das Wetter und behalte die nächsten Tage im Blick.", placeholder="z. B. London, Oslo, Zürich ...")
     # Hinweis für häufige Städtenamen
     st.caption("💡 Tipp: Bei häufigen Städtenamen einfach präziser suchen — z. B. 'Halle (Saale)' statt 'Halle'.")
 with col_button:
@@ -141,7 +141,7 @@ with col_button:
     if st.button("➕ Hinzufügen"):
         if not neue_stadt.strip():
             # Leere Eingabe abfangen
-            st.warning("🌍 Gib einen Stadtnamen ein, dann suchen wir sie für dich!")
+            st.warning("🌍 Bitte gib einen Stadtnamen ein!")
         elif neue_stadt.strip() in st.session_state.staedte_liste:
             # Doppelte Einträge verhindern
             st.warning(f"🏙️ {neue_stadt} ist bereits in deiner Liste!")
@@ -176,7 +176,7 @@ with col_button:
 # die Seite neu geladen.
 # ─────────────────────────────────────────────
 if "treffer" in st.session_state and st.session_state.treffer:
-    st.info("🌍 Wir haben mehrere Städte gefunden – welche meinst du?")
+    st.info("🌍 Mehrere Städte gefunden – welche meinst du?")
     for geo in st.session_state.treffer:
         # Label zeigt Name, Region und Land zur eindeutigen Identifikation
         label = f"{geo['name']} — {geo['region']}, {geo['land']}"
@@ -239,7 +239,7 @@ else:
                     stadt["breitengrad"], stadt["laengengrad"], stadtname=stadtname
                 )
                 if len(prognose) < 7:
-                     st.warning("⚠️ API-Server ist scheinbar down, daher Wetterdienst eingeschränkt – Prognose nur für 3 Tage verfügbar.")
+                     st.warning("⚠️ Technische Störung, Wetterdienst funktioniert eingeschränkt!")
                 # Aktuellen Wetterdatensatz in Datenbank speichern
                 # (baut Verlauf für Durchschnittsberechnung auf)
                 datenbank.wetterdaten_speichern(
@@ -324,8 +324,12 @@ if len(st.session_state.staedte_liste) > 1:
 
     sonnigste = None
     verregnetste = None
+    waermste = None
+    kaelteste = None
     min_wettercode = 999
     max_niederschlag = -1
+    max_temp = -999
+    min_temp = 999
 
     for stadtname in st.session_state.staedte_liste:
         stadt = next((s for s in staedte_db if s["name"] == stadtname), None)
@@ -341,17 +345,34 @@ if len(st.session_state.staedte_liste) > 1:
             # Sonnigste Stadt = niedrigster aktueller Wettercode
             if wetter["wettercode"] < min_wettercode:
                 min_wettercode = wetter["wettercode"]
-                sonnigste = stadtname
+                sonnigste = (stadtname, wetter["temperatur"])
+
             # Verregnetste Stadt = höchster Gesamtniederschlag in Prognose
             gesamt = sum(tag["niederschlag"] for tag in prognose)
             if gesamt > max_niederschlag:
                 max_niederschlag = gesamt
-                verregnetste = stadtname
+                verregnetste = (stadtname, gesamt, wetter["temperatur"])
+
+            # Wärmste Stadt = höchste durchschnittliche Tageshöchsttemperatur
+            avg_max = sum(tag["temperatur_max"] for tag in prognose) / len(prognose)
+            if avg_max > max_temp:
+                max_temp = avg_max
+                waermste = (stadtname, round(avg_max, 1))
+
+            # Kälteste Stadt = niedrigste durchschnittliche Tagestiefsttemperatur
+            avg_min = sum(tag["temperatur_min"] for tag in prognose) / len(prognose)
+            if avg_min < min_temp:
+                min_temp = avg_min
+                kaelteste = (stadtname, round(avg_min, 1))
+
         except RuntimeError:
-            # Fehler bei einzelner Stadt ignorieren
             pass
 
     if sonnigste:
-        st.success(f"☀️ Das sonnigste Wetter hat **{sonnigste}**.")
+        st.success(f"☀️ Das sonnigste Wetter hat **{sonnigste[0]}** – aktuell {sonnigste[1]} °C.")
     if verregnetste:
-        st.info(f"🌧️ Am meisten regnet es in **{verregnetste}**.")
+        st.info(f"🌧️ Am meisten regnet es in **{verregnetste[0]}** – {round(verregnetste[1], 1)} mm Niederschlag, aktuell {verregnetste[2]} °C.")
+    if waermste:
+        st.warning(f"🥵 Am wärmsten ist es in **{waermste[0]}** – Ø Höchsttemperatur {waermste[1]} °C.")
+    if kaelteste:
+        st.info(f"🥶 Am kältesten ist es in **{kaelteste[0]}** – Ø Tiefsttemperatur {kaelteste[1]} °C.")
