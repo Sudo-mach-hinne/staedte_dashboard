@@ -165,7 +165,7 @@ with col_button:
                     st.session_state.treffer = treffer
             except RuntimeError:
                 # Freundliche Fehlermeldung bei unbekannter Stadt
-                st.error("😢 Oh no! Diese Stadt kennen wir leider nicht. Vielleicht ein Tippfehler?")
+                st.error("😢 Oh no! Diese Stadt ist unbekannt. Vielleicht ein Tippfehler?")
 
 # ─────────────────────────────────────────────
 # AUSWAHL BEI MEHREREN TREFFERN
@@ -225,7 +225,7 @@ else:
         with cols[i]:
             # Entfernen-Button -- löscht nur aus der Anzeigeliste,
             # Datenbankdaten bleiben erhalten
-            if st.button(f"✕ {stadtname}", key=f"entfernen_{stadtname}"):
+            if st.button(f"❌ {stadtname}", key=f"entfernen_{stadtname}"):
                 st.session_state.staedte_liste.remove(stadtname)
                 st.rerun()
 
@@ -376,3 +376,4 @@ if len(st.session_state.staedte_liste) > 1:
         st.warning(f"🥵 Am wärmsten ist es in **{waermste[0]}** – Ø Höchsttemperatur {waermste[1]} °C.")
     if kaelteste:
         st.info(f"🥶 Am kältesten ist es in **{kaelteste[0]}** – Ø Tiefsttemperatur {kaelteste[1]} °C.")
+    
