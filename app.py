@@ -251,3 +251,44 @@ else:
                 # API-Fehler werden pro Stadt angezeigt --
                 # ein Fehler bricht nicht die anderen Städte ab
                 st.error(f"{stadtname}: {str(fehler)}")
+# ─────────────────────────────────────────────
+# AUSWERTUNG: Sonnigste und verregnetste Stadt
+# Vergleicht alle angezeigten Städte anhand
+# ihrer aktuellen Wetterdaten.
+# ─────────────────────────────────────────────
+if len(st.session_state.staedte_liste) > 1:
+    st.divider()
+    staedte_db = datenbank.alle_staedte()
+    
+    sonnigste = None
+    verregnetste = None
+    min_wettercode = 999
+    max_niederschlag = -1
+
+    for stadtname in st.session_state.staedte_liste:
+        stadt = next((s for s in staedte_db if s["name"] == stadtname), None)
+        if not stadt:
+            continue
+        try:
+            wetter = api_client.wetter_aktuell_abrufen(
+                stadt["breitengrad"], stadt["laengengrad"]
+            )
+            prognose = api_client.prognose_abrufen(
+                stadt["breitengrad"], stadt["laengengrad"]
+            )
+            # Sonnigste Stadt = niedrigster Wettercode
+            if wetter["wettercode"] < min_wettercode:
+                min_wettercode = wetter["wettercode"]
+                sonnigste = stadtname
+            # Verregnetste Stadt = höchster Gesamtniederschlag in Prognose
+            gesamt = sum(tag["niederschlag"] for tag in prognose)
+            if gesamt > max_niederschlag:
+                max_niederschlag = gesamt
+                verregnetste = stadtname
+        except RuntimeError:
+            pass
+
+    if sonnigste:
+        st.success(f"☀️ Das sonnigste Wetter hat **{sonnigste}**.")
+    if verregnetste:
+        st.info(f"🌧️ Am meisten regnet es in **{verregnetste}**.")
