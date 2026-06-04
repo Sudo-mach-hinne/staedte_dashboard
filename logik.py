@@ -88,6 +88,24 @@ def prognose_als_dataframe(prognose):
     df["datum"] = pd.to_datetime(df["datum"])
     return df.sort_values("datum").reset_index(drop=True)
 
+def wettercode_zu_icon(wettercode):
+    """Gibt einen Weather-Icons CSS-Klassennamen fuer einen WMO-Wettercode zurueck."""
+    if wettercode == 0:
+        return "wi wi-day-sunny"
+    elif wettercode in [1, 2]:
+        return "wi wi-day-cloudy"
+    elif wettercode == 3:
+        return "wi wi-cloudy"
+    elif wettercode in range(51, 68):
+        return "wi wi-rain"
+    elif wettercode in range(71, 78):
+        return "wi wi-snow"
+    elif wettercode in range(80, 83):
+        return "wi wi-showers"
+    elif wettercode in range(95, 100):
+        return "wi wi-thunderstorm"
+    else:
+        return "wi wi-na"
 
 if __name__ == "__main__":
     # Testdaten
