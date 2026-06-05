@@ -295,12 +295,13 @@ if st.session_state.staedte_liste:
             pass
 
     st_folium(karte, use_container_width=True, height=400)
-
+    st.divider()
 # ─────────────────────────────────────────────
 # AUSWERTUNG
 # ─────────────────────────────────────────────
+st.markdown("### 🌡️ Deine Städte im Vergleich")
 if len(st.session_state.staedte_liste) > 1:
-    st.divider()
+    
     staedte_db = datenbank.alle_staedte()
 
     sonnigste = None
