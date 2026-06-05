@@ -15,6 +15,7 @@ API_TIMEOUT = int(os.getenv("API_TIMEOUT", 10))
 
 API_URL = "https://api.open-meteo.com/v1/forecast"
 FALLBACK_URL = "https://wttr.in"
+LAENDER_URL = "https://restcountries.com/v3.1/name"
 
 
 def _wetter_fallback_aktuell(stadtname):
@@ -227,6 +228,49 @@ def koordinaten_abrufen(stadtname, count=10):
         raise RuntimeError(f"API-Fehler: {fehler.response.status_code}")
 
 
+def laenderdaten_abrufen(landname):
+    """
+    Ruft Laenderfakten von REST Countries ab.
+
+    Parameter:
+        landname (str): Name des Landes (z. B. "Germany")
+
+    Rueckgabe:
+        dict mit den Feldern:
+            hauptstadt (str)
+            waehrung (str)
+            sprachen (str)
+        oder None bei Fehler
+    """
+    try:
+        url = f"{LAENDER_URL}/{landname}"
+        antwort = requests.get(url, timeout=API_TIMEOUT)
+        antwort.raise_for_status()
+        daten = antwort.json()[0]
+
+        # Hauptstadt
+        hauptstadt = daten.get("capital", ["unbekannt"])[0]
+
+        # Währung -- Datenstruktur: {"EUR": {"name": "Euro", "symbol": "€"}}
+        waehrungen = daten.get("currencies", {})
+        waehrung = ", ".join(
+            f"{v.get('name', k)} ({v.get('symbol', '')})"
+            for k, v in waehrungen.items()
+        )
+
+        # Sprachen -- Datenstruktur: {"deu": "German"}
+        sprachen_dict = daten.get("languages", {})
+        sprachen = ", ".join(sprachen_dict.values())
+
+        return {
+            "hauptstadt": hauptstadt,
+            "waehrung": waehrung,
+            "sprachen": sprachen,
+        }
+    except Exception:
+        return None
+
+
 if __name__ == "__main__":
     print("Test: Aktuelles Wetter Leipzig")
     wetter = wetter_aktuell_abrufen(51.34, 12.37, stadtname="Leipzig")
@@ -236,3 +280,7 @@ if __name__ == "__main__":
     prognose = prognose_abrufen(51.34, 12.37, tage=7, stadtname="Leipzig")
     for tag in prognose:
         print(tag)
+    print()
+    print("Test: Laenderdaten Deutschland")
+    laender = laenderdaten_abrufen("Germany")
+    print(laender)

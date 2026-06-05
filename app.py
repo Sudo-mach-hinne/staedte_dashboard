@@ -8,7 +8,8 @@ import streamlit as st
 import datenbank
 import api_client
 import logik
-
+from streamlit_folium import st_folium
+import folium
 # ─────────────────────────────────────────────
 # SEITENKONFIGURATION
 # Muss der allererste Streamlit-Befehl sein.
@@ -377,3 +378,50 @@ if len(st.session_state.staedte_liste) > 1:
     if kaelteste:
         st.info(f"🥶 Am kältesten ist es in **{kaelteste[0]}** – Ø Tiefsttemperatur {kaelteste[1]} °C.")
     
+    # ─────────────────────────────────────────────
+# WELTKARTE
+# Zeigt alle aktuellen Städte als Pins auf einer
+# interaktiven Weltkarte. Klick auf Pin öffnet
+# Popup mit Wetterdaten und Länderinformationen.
+# ─────────────────────────────────────────────
+if st.session_state.staedte_liste:
+    st.divider()
+    st.markdown("### 🗺️ Städte auf der Weltkarte")
+
+    karte = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB positron")
+    staedte_db = datenbank.alle_staedte()
+
+    for stadtname in st.session_state.staedte_liste:
+        stadt = next((s for s in staedte_db if s["name"] == stadtname), None)
+        if not stadt:
+            continue
+        try:
+            wetter = api_client.wetter_aktuell_abrufen(
+                stadt["breitengrad"], stadt["laengengrad"], stadtname=stadtname
+            )
+            laender = api_client.laenderdaten_abrufen(stadt["land"])
+
+            popup_text = f"""
+            <b>{stadtname}</b><br>
+            🌡️ {wetter['temperatur']} °C &nbsp;|&nbsp; 💨 {wetter['windgeschwindigkeit']} km/h<br>
+            🌧️ Niederschlag: {wetter['niederschlag']} mm<br>
+            """
+            if laender:
+                popup_text += f"""
+            <hr style='margin:4px 0'>
+            🏛️ Hauptstadt: {laender['hauptstadt']}<br>
+            💶 Währung: {laender['waehrung']}<br>
+            🗣️ Sprache(n): {laender['sprachen']}
+            """
+
+            folium.Marker(
+                location=[stadt["breitengrad"], stadt["laengengrad"]],
+                popup=folium.Popup(popup_text, max_width=250),
+                tooltip=stadtname,
+                icon=folium.Icon(color="purple", icon="cloud", prefix="fa"),
+            ).add_to(karte)
+
+        except RuntimeError:
+            pass
+
+    st_folium(karte, use_container_width=True, height=400)
