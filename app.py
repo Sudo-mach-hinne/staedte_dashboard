@@ -94,7 +94,7 @@ st.markdown(f"""
 # ─────────────────────────────────────────────
 datenbank.initialisiere_datenbank()
 
-BEISPIELSTAEDTE = ["Leipzig", "Tokio", "Prag"]
+BEISPIELSTAEDTE = ["Leipzig", "Tokio", "New York City"]
 
 if "staedte_liste" not in st.session_state:
     st.session_state.staedte_liste = []
@@ -123,12 +123,15 @@ col_input, col_button = st.columns([4, 1])
 with col_input:
     neue_stadt = st.text_input(
         "Füge Städte hinzu, vergleiche das Wetter und behalte die nächsten Tage im Blick.",
-        placeholder="z. B. London, Oslo, Zürich ..."
+        placeholder="z. B. London, Oslo, Zürich ...",
+        key="stadtname_input",
+        on_change=lambda: st.session_state.update({"hinzufuegen": True})
     )
     st.caption("💡 Tipp: Bei häufigen Städtenamen einfach präziser suchen — z. B. 'Halle (Saale)' statt 'Halle'.")
 with col_button:
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("➕ Hinzufügen"):
+    if st.button("➕ Hinzufügen") or st.session_state.get("hinzufuegen"):
+        st.session_state["hinzufuegen"] = False
         if not neue_stadt.strip():
             st.warning("🌍 Bitte gib einen Stadtnamen ein!")
         elif neue_stadt.strip() in st.session_state.staedte_liste:
@@ -258,7 +261,14 @@ if st.session_state.staedte_liste:
     st.divider()
     st.markdown("### 🗺️ Städte auf der Weltkarte")
     st.caption("📍 Klicke auf einen Stadtpin, um aktuelle Wetterdaten sowie Länderinformationen anzuzeigen.")
-    karte = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB positron")
+    karte = folium.Map(
+        location=[20, 0],
+        zoom_start=3,
+        tiles="CartoDB positron",
+        min_zoom=3,
+        max_bounds=True
+    )   
+    karte.options["maxBounds"] = [[-90, -180], [90, 180]]
     staedte_db = datenbank.alle_staedte()
 
     for stadtname in st.session_state.staedte_liste:
