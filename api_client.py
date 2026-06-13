@@ -6,6 +6,7 @@ Datum: 2. Juni 2026
 """
 
 import requests
+import pandas as pd
 import os
 from dotenv import load_dotenv
 
@@ -13,9 +14,12 @@ load_dotenv()
 
 API_TIMEOUT = int(os.getenv("API_TIMEOUT", 10))
 
-API_URL = "https://api.open-meteo.com/v1/forecast"
-FALLBACK_URL = "https://wttr.in"
-LAENDER_URL = "https://restcountries.com/v3.1/name"
+# API-Endpunkte
+API_URL        = "https://api.open-meteo.com/v1/forecast"
+FALLBACK_URL   = "https://wttr.in"
+LAENDER_URL    = "https://restcountries.com/v3.1/name"
+HISTORISCH_URL = "https://archive-api.open-meteo.com/v1/archive"
+KLIMA_URL      = "https://climate-api.open-meteo.com/v1/climate"
 
 
 def _wetter_fallback_aktuell(stadtname):
@@ -216,6 +220,7 @@ def koordinaten_abrufen(stadtname, count=10):
                 "name": ergebnis["name"],
                 "land": ergebnis.get("country", ""),
                 "region": ergebnis.get("admin1", ""),
+                "kreis": ergebnis.get("admin2", ""),
                 "breitengrad": ergebnis["latitude"],
                 "laengengrad": ergebnis["longitude"],
             })
@@ -251,7 +256,7 @@ def laenderdaten_abrufen(landname):
         # Hauptstadt
         hauptstadt = daten.get("capital", ["unbekannt"])[0]
 
-        # Währung -- Datenstruktur: {"EUR": {"name": "Euro", "symbol": "€"}}
+        # Waehrung -- Datenstruktur: {"EUR": {"name": "Euro", "symbol": "€"}}
         waehrungen = daten.get("currencies", {})
         waehrung = ", ".join(
             f"{v.get('name', k)} ({v.get('symbol', '')})"
@@ -271,6 +276,109 @@ def laenderdaten_abrufen(landname):
         return None
 
 
+def historisches_wetter_abrufen(breitengrad, laengengrad, datum_von, datum_bis):
+    """
+    Ruft historische Wetterdaten von der Open-Meteo Archive API ab.
+
+    Parameter:
+        breitengrad (float): Breitengrad der Stadt
+        laengengrad (float): Laengengrad der Stadt
+        datum_von (str): Startdatum im Format YYYY-MM-DD
+        datum_bis (str): Enddatum im Format YYYY-MM-DD
+
+    Rueckgabe:
+        Liste von Dicts je Tag mit:
+            datum (str)
+            temperatur_max (float)
+            temperatur_min (float)
+            niederschlag (float)
+        oder RuntimeError bei Fehler
+    """
+    params = {
+        "latitude": breitengrad,
+        "longitude": laengengrad,
+        "start_date": datum_von,
+        "end_date": datum_bis,
+        "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum",
+        "timezone": "Europe/Berlin",
+    }
+    try:
+        antwort = requests.get(HISTORISCH_URL, params=params, timeout=API_TIMEOUT)
+        antwort.raise_for_status()
+        daten = antwort.json()
+        daily = daten["daily"]
+        ergebnis = []
+        for i in range(len(daily["time"])):
+            ergebnis.append({
+                "datum": daily["time"][i],
+                "temperatur_max": daily["temperature_2m_max"][i],
+                "temperatur_min": daily["temperature_2m_min"][i],
+                "niederschlag": daily["precipitation_sum"][i] or 0.0,
+            })
+        return ergebnis
+    except Exception as fehler:
+        raise RuntimeError(f"Historische Wetter-API nicht erreichbar: {fehler}")
+
+
+def reisewetter_abrufen(breitengrad, laengengrad):
+    """
+    Ruft klimatologische Monatsdurchschnitte von der Open-Meteo Climate API ab.
+    Liefert eine Jahresuebersicht mit Durchschnittstemperaturen und Niederschlag.
+
+    Parameter:
+        breitengrad (float): Breitengrad der Stadt
+        laengengrad (float): Laengengrad der Stadt
+
+    Rueckgabe:
+        Liste von 12 Dicts (Januar bis Dezember) mit:
+            monat (str)
+            temperatur_max (float)
+            temperatur_min (float)
+            niederschlag (float)
+        oder RuntimeError bei Fehler
+    """
+    params = {
+        "latitude": breitengrad,
+        "longitude": laengengrad,
+        "start_date": "1991-01-01",
+        "end_date": "2020-12-31",
+        "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum",
+        "timezone": "Europe/Berlin",
+        "models": "EC_Earth3P_HR",
+    }
+    try:
+        antwort = requests.get(KLIMA_URL, params=params, timeout=30)
+        antwort.raise_for_status()
+        daten = antwort.json()
+        daily = daten["daily"]
+
+        df = pd.DataFrame({
+            "datum": pd.to_datetime(daily["time"]),
+            "temperatur_max": daily["temperature_2m_max"],
+            "temperatur_min": daily["temperature_2m_min"],
+            "niederschlag": [x or 0.0 for x in daily["precipitation_sum"]],
+        })
+        df["monat"] = df["datum"].dt.month
+
+        monate_namen = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
+                        "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"]
+        ergebnis = []
+        for m in range(1, 13):
+            monats_df = df[df["monat"] == m]
+            ergebnis.append({
+                "monat": monate_namen[m - 1],
+                "temperatur_max": round(monats_df["temperatur_max"].mean(), 1),
+                "temperatur_min": round(monats_df["temperatur_min"].mean(), 1),
+                "niederschlag": round(monats_df["niederschlag"].mean(), 1),
+            })
+        return ergebnis
+    except Exception as fehler:
+        raise RuntimeError(f"Reisewetter-API nicht erreichbar: {fehler}")
+
+
+# ---------------------------------------------------------------------------
+# Manuelle Testausgabe (nur bei direktem Aufruf, nicht beim Import)
+# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     print("Test: Aktuelles Wetter Leipzig")
     wetter = wetter_aktuell_abrufen(51.34, 12.37, stadtname="Leipzig")

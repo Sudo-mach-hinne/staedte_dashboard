@@ -14,25 +14,25 @@ Bei Ausfall von Open-Meteo springt automatisch wttr.in als Fallback-API ein. Die
 
 ## Installation
 
-1. Repository klonen:
+1.  Repository klonen:
 
         git clone https://github.com/sudo-mach-hinne/staedte_dashboard.git
         cd staedte_dashboard
 
-2. Virtuelle Umgebung anlegen und aktivieren:
+2.  Virtuelle Umgebung anlegen und aktivieren:
 
-        python -m venv .venv
-        .venv\Scripts\activate
+         python -m venv .venv
+         .venv\Scripts\activate
 
-   Bei PowerShell-Fehler (einmalig ausführen):
+    Bei PowerShell-Fehler (einmalig ausführen):
 
-        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+         Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
-3. Bibliotheken installieren:
+3.  Bibliotheken installieren:
 
         pip install -r requirements.txt
 
-4. Konfiguration — .env.example nach .env kopieren:
+4.  Konfiguration — .env.example nach .env kopieren:
 
         copy .env.example .env
 
@@ -49,6 +49,13 @@ Die App öffnet sich automatisch im Browser unter http://localhost:8501
 - Jede Stadt zeigt aktuelles Wetter, Wettericon, Temperatur, Wind, Ø-Temperatur und 7-Tage-Prognose
 - Die Weltkarte zeigt alle Städte als anklickbare Pins mit Wetter- und Länderinformationen
 - Ab zwei Städten erscheint automatisch ein Vergleich: sonnigste, verregnetste, wärmste und kälteste Stadt
+  README — Änderungen:
+
+Bedienung — ergänzen:
+
+Über die Navigation links sind weitere Seiten erreichbar: Historisches Wetter und Reisewetter
+Historisches Wetter: beliebigen Ort eingeben, Zeitraum wählen, Temperatur- und Niederschlagsverlauf als Diagramm anzeigen (Daten ab 1940)
+Reisewetter: Reiseziel eingeben, Klimaübersicht mit Monatsdiagrammen für Temperatur und Niederschlag (Durchschnitt 1991–2020)
 
 ## Projektstruktur
 
@@ -65,16 +72,23 @@ Die App öffnet sich automatisch im Browser unter http://localhost:8501
     ├── .env.example            # Konfigurationsvorlage
     ├── .gitignore              # Git-Ausschlussliste
     └── requirements.txt        # Bibliotheken und Versionen
+    ├── pages/
+
+│ ├──── Historisches_Wetter.py # Historische Wetterdaten mit Diagrammen
+│ └──── Reisewetter.py # Klimaübersicht für Reiseziele
 
 ## Verwendete APIs
 
-| API | URL | Verwendung |
-|---|---|---|
-| Open-Meteo Forecast | https://api.open-meteo.com/v1/forecast | Aktuelle Wetterdaten und 7-Tage-Prognose |
-| Open-Meteo Geocoding | https://geocoding-api.open-meteo.com/v1/search | Koordinaten aus Stadtnamen |
-| wttr.in | https://wttr.in | Fallback bei Open-Meteo-Ausfall |
-| REST Countries | https://restcountries.com/v3.1 | Hauptstadt, Währung, Sprache |
-| OpenStreetMap / folium | https://openstreetmap.org | Interaktive Weltkarte |
+| API                    | URL                                            | Verwendung                               |
+| ---------------------- | ---------------------------------------------- | ---------------------------------------- |
+| Open-Meteo Forecast    | https://api.open-meteo.com/v1/forecast         | Aktuelle Wetterdaten und 7-Tage-Prognose |
+| Open-Meteo Geocoding   | https://geocoding-api.open-meteo.com/v1/search | Koordinaten aus Stadtnamen               |
+| wttr.in                | https://wttr.in                                | Fallback bei Open-Meteo-Ausfall          |
+| REST Countries         | https://restcountries.com/v3.1                 | Hauptstadt, Währung, Sprache             |
+| OpenStreetMap / folium | https://openstreetmap.org                      | Interaktive Weltkarte                    |
+| Open-Meteo Archive API | archive-api.open-meteo.com/v1/archive          | Historische Wetterdaten ab 1940          |
+
+| Open-Meteo Climate API | climate-api.open-meteo.com/v1/climate | Klimadurchschnitte 1991–2020 |
 
 Alle APIs sind kostenlos und benötigen keinen API-Schlüssel.
 
