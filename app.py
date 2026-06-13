@@ -127,7 +127,7 @@ with col_input:
         key="stadtname_input",
         on_change=lambda: st.session_state.update({"hinzufuegen": True})
     )
-    st.caption("💡 Tipp: Bei häufigen Städtenamen einfach präziser suchen — z. B. 'Halle (Saale)' statt 'Halle'.")
+    st.caption("💡 Tipp: Bei häufigen Städtenamen einfach präziser suchen, z. B. 'Halle (Saale)' statt 'Halle'.")
 with col_button:
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("➕ Hinzufügen") or st.session_state.get("hinzufuegen"):

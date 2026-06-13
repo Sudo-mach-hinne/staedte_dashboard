@@ -87,7 +87,7 @@ st.markdown(f"""
 # SEITENTITEL
 # ─────────────────────────────────────────────
 st.title("✈️ Reisewetter")
-st.markdown("Gib eine Stadt oder Region ein und erhalte eine Jahresübersicht mit Klimadaten — ideal zur Reiseplanung.")
+st.markdown("Gib eine Stadt oder Region ein und erhalte eine Jahresübersicht mit Klimadaten. Ideal zur Reiseplanung.")
 st.divider()
 
 # ─────────────────────────────────────────────
