@@ -1,9 +1,10 @@
 """
 Modulname: 2_Niederschlagsradar.py
 Beschreibung: Streamlit-Unterseite -- Niederschlagsradar (RainViewer).
-              Zeigt Radar-Niederschlag als Overlay auf einer Karte. Statt einer
-              flackernden Auto-Animation steuert ein Zeitschieberegler, welcher
-              Radar-Zeitpunkt angezeigt wird -- das laeuft stabil im Streamlit-Modell.
+Zeigt Radar-Niederschlag als Overlay auf einer Karte. Statt einer
+flackernden Auto-Animation steuert ein Zeitschieberegler, welcher
+Radar-Zeitpunkt angezeigt wird -- das laeuft stabil im Streamlit-Modell.
+
 Autor: Anne-Katrin Dittmann
 Datum: Juni 2026
 """
@@ -102,7 +103,7 @@ with col_button:
                 st.session_state["radar_treffer"] = treffer
                 st.session_state["radar_gewaehlt"] = None
             except RuntimeError:
-                st.error("Ort nicht gefunden. Bitte versuche es mit einem anderen Namen.")
+                st.error("😢 Oh no! Diese Stadt ist unbekannt. Vielleicht ein Tippfehler?")
 
 # ─────────────────────────────────────────────
 # TREFFERAUSWAHL bei mehreren Ergebnissen
@@ -180,7 +181,7 @@ if st.session_state.get("radar_gewaehlt"):
     # ─────────────────────────────────────────
     modus = st.radio(
         "Was möchtest du sehen?",
-        ["🛰️ Vergangenheit (Radar)", "🔮 Zukunft (Vorhersage)"],
+        ["🕰️ Vergangenheit (Radar)", "🔮 Zukunft (Vorhersage)"],
         horizontal=True,
     )
 

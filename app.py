@@ -1,8 +1,8 @@
 """
 Modulname: app.py
 Beschreibung: Streamlit-Frontend -- City Weather Dashboard.
-              Hauptseite: Staedte verwalten, aktuelles Wetter + 7-Tage-Prognose
-              anzeigen, Weltkarte und Staedte-Vergleich.
+Hauptseite: Staedte verwalten, aktuelles Wetter + 7-Tage-Prognose anzeigen, Weltkarte und Staedte-Vergleich.
+
 Autor: Anne-Katrin Dittmann
 Datum: Juni 2026
 """

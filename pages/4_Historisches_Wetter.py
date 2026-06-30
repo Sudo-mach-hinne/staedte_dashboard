@@ -53,7 +53,7 @@ with col_button:
                 st.session_state["hist_treffer"] = treffer
                 st.session_state["hist_gewaehlt"] = None
             except RuntimeError:
-                st.error("Ort nicht gefunden. Bitte versuche es mit einem anderen Namen.")
+                st.error("😢 Oh no! Diese Stadt ist unbekannt. Vielleicht ein Tippfehler?")
 
 # ─────────────────────────────────────────────
 # TREFFERAUSWAHL bei mehreren Ergebnissen
