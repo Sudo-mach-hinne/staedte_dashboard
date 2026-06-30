@@ -10,78 +10,17 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 import api_client
-import base64
-import os
+import stil
 
 # ─────────────────────────────────────────────
 # SEITENKONFIGURATION
 # ─────────────────────────────────────────────
 st.set_page_config(page_title="Reisewetter", layout="wide")
 
-# ─────────────────────────────────────────────
-# WEATHER ICONS FONT
-# ─────────────────────────────────────────────
-st.markdown("""
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.10/css/weather-icons.min.css">
-""", unsafe_allow_html=True)
-
-# ─────────────────────────────────────────────
-# HINTERGRUNDBILD (identisch mit Hauptseite)
-# ─────────────────────────────────────────────
-hintergrund_css = "background: linear-gradient(170deg, #a8d8ea 0%, #87ceeb 35%, #b0d4e8 55%, #f7c59f 78%, #f4a574 92%, #e8856a 100%);"
-
-bild_pfad = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Clouds_background.jpg")
-if os.path.exists(bild_pfad):
-    with open(bild_pfad, "rb") as f:
-        bild_b64 = base64.b64encode(f.read()).decode()
-    hintergrund_css = f'background-image: url("data:image/jpeg;base64,{bild_b64}"); background-size: cover; background-position: center; background-attachment: fixed;'
-
-# ─────────────────────────────────────────────
-# CSS-STYLING
-# ─────────────────────────────────────────────
-st.markdown(f"""
-    <style>
-    .stApp {{
-        {hintergrund_css}
-    }}
-    .stApp::before {{
-        content: "";
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: rgba(255, 255, 255, 0.55);
-        z-index: 0;
-        pointer-events: none;
-    }}
-    .stMetric {{
-        background: rgba(255, 255, 255, 0.65);
-        border-radius: 12px;
-        padding: 10px;
-    }}
-    h1 {{
-        color: #1a3a5c !important;
-        font-size: 2.2rem !important;
-    }}
-    h2, h3 {{
-        color: #1a3a5c !important;
-        font-size: 1.6rem !important;
-    }}
-    p, label, div[data-testid="stCaptionContainer"], .stMarkdown {{
-        font-size: 15px !important;
-        color: #1a1a2e !important;
-    }}
-    .stButton > button {{
-        background: rgba(255, 255, 255, 0.65);
-        border: 1px solid rgba(255, 255, 255, 0.85);
-        border-radius: 8px;
-        color: #1a3a5c;
-        font-size: 15px !important;
-    }}
-    .stButton > button:hover {{
-        background: rgba(255, 255, 255, 0.9);
-    }}
-    </style>
-""", unsafe_allow_html=True)
+# ──────────────────────────────
+# STYLING (Font, Hintergrund, CSS -- ausgelagert in stil.py)
+# ──────────────────────────────
+stil.lade_css()
 
 # ─────────────────────────────────────────────
 # SEITENTITEL

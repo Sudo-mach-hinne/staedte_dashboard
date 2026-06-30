@@ -182,6 +182,51 @@ def prognose_abrufen(breitengrad, laengengrad, tage=7, stadtname=None):
                 )
         raise RuntimeError("Prognose-API nicht erreichbar und kein Stadtname fuer Fallback angegeben.")
 
+def stuendlich_abrufen(breitengrad, laengengrad):
+    """
+    Ruft die stündliche Wettervorhersage von Open-Meteo ab.
+
+    Parameter:
+        breitengrad (float)
+        laengengrad (float)
+
+    Rückgabe:
+        Liste von Dicts mit
+            zeit
+            temperatur
+            niederschlag
+    """
+
+    params = {
+        "latitude": breitengrad,
+        "longitude": laengengrad,
+        "hourly": "temperature_2m,precipitation",
+        "forecast_days": 7,
+        "timezone": "Europe/Berlin",
+    }
+
+    try:
+        antwort = requests.get(API_URL, params=params, timeout=API_TIMEOUT)
+        antwort.raise_for_status()
+
+        daten = antwort.json()
+        hourly = daten["hourly"]
+
+        ergebnis = []
+
+        for i in range(len(hourly["time"])):
+            ergebnis.append({
+                "zeit": hourly["time"][i],
+                "temperatur": hourly["temperature_2m"][i],
+                "niederschlag": hourly["precipitation"][i]
+            })
+
+        return ergebnis
+
+    except Exception as fehler:
+        raise RuntimeError(
+            f"Stündliche Wetterdaten konnten nicht geladen werden: {fehler}"
+        )
 
 def koordinaten_abrufen(stadtname, count=10):
     """
