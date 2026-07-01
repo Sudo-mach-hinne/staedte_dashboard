@@ -72,11 +72,12 @@ if "staedte_liste" not in st.session_state:
             treffer = api_client.koordinaten_abrufen(beispiel)
             if treffer:
                 geo = treffer[0]   # erster Treffer als Standard
-                datenbank.stadt_einfuegen(
+                stadt_id = datenbank.stadt_einfuegen(
                     geo["name"], geo["land"], geo["breitengrad"], geo["laengengrad"]
                 )
-                if geo["name"] not in st.session_state.staedte_liste:
-                    st.session_state.staedte_liste.append(geo["name"])
+                # Wir merken uns die eindeutige ID, nicht den Namen.
+                if stadt_id and stadt_id not in st.session_state.staedte_liste:
+                    st.session_state.staedte_liste.append(stadt_id)
         except RuntimeError:
             # Falls die Geocoding-API nicht erreichbar ist: Stadt ueberspringen,
             # nicht die ganze App abstuerzen lassen.
@@ -108,8 +109,6 @@ with col_button:
         st.session_state["hinzufuegen"] = False   # Flag sofort zuruecksetzen
         if not neue_stadt.strip():
             st.warning("🌍 Bitte gib einen Stadtnamen ein!")
-        elif neue_stadt.strip() in st.session_state.staedte_liste:
-            st.warning(f"🏙️ {neue_stadt} ist bereits in deiner Liste!")
         else:
             try:
                 with st.spinner(f"🔍 Suche nach {neue_stadt}..."):
@@ -117,12 +116,17 @@ with col_button:
                 if len(treffer) == 1:
                     # Eindeutiger Treffer: direkt uebernehmen
                     geo = treffer[0]
-                    datenbank.stadt_einfuegen(
+                    stadt_id = datenbank.stadt_einfuegen(
                         geo["name"], geo["land"], geo["breitengrad"], geo["laengengrad"]
                     )
-                    if geo["name"] not in st.session_state.staedte_liste:
-                        st.session_state.staedte_liste.append(geo["name"])
-                    st.rerun()   # Seite neu laden, damit die Stadt sofort erscheint
+                    # Dublette wird jetzt ueber die eindeutige ID geprueft, nicht
+                    # ueber den Namen. So sind gleichnamige Staedte (z. B. zwei
+                    # Dresdens) unterschiedliche IDs und beide hinzufuegbar.
+                    if stadt_id in st.session_state.staedte_liste:
+                        st.warning(f"🏙️ {geo['name']} ({geo['land']}) ist bereits in deiner Liste!")
+                    else:
+                        st.session_state.staedte_liste.append(stadt_id)
+                        st.rerun()   # Seite neu laden, damit die Stadt sofort erscheint
                 else:
                     # Mehrere Treffer: zur Auswahl zwischenspeichern (s. naechster Block)
                     st.session_state.treffer = treffer
@@ -140,11 +144,13 @@ if "treffer" in st.session_state and st.session_state.treffer:
         label = f"{geo['name']} — {geo['region']}, {geo['land']}"
         # key muss eindeutig sein -> Koordinaten anhaengen
         if st.button(label, key=f"treffer_{geo['breitengrad']}_{geo['laengengrad']}"):
-            datenbank.stadt_einfuegen(
+            stadt_id = datenbank.stadt_einfuegen(
                 geo["name"], geo["land"], geo["breitengrad"], geo["laengengrad"]
             )
-            if geo["name"] not in st.session_state.staedte_liste:
-                st.session_state.staedte_liste.append(geo["name"])
+            # Auch hier: ueber die ID pruefen. Zwei gleichnamige Orte an
+            # verschiedenen Koordinaten erhalten verschiedene IDs.
+            if stadt_id and stadt_id not in st.session_state.staedte_liste:
+                st.session_state.staedte_liste.append(stadt_id)
             st.session_state.treffer = []   # Auswahl leeren
             st.rerun()
 
@@ -160,16 +166,17 @@ else:
     cols = st.columns(len(st.session_state.staedte_liste))
     staedte_db = datenbank.alle_staedte()
 
-    for i, stadtname in enumerate(st.session_state.staedte_liste):
-        # passenden DB-Eintrag zur Stadt finden
-        stadt = next((s for s in staedte_db if s["name"] == stadtname), None)
+    for i, stadt_id in enumerate(st.session_state.staedte_liste):
+        # passenden DB-Eintrag ueber die eindeutige ID finden
+        stadt = next((s for s in staedte_db if s["id"] == stadt_id), None)
         if not stadt:
             continue
+        stadtname = stadt["name"]
 
         with cols[i]:
-            # Entfernen-Button pro Stadt
-            if st.button(f"❌ {stadtname}", key=f"entfernen_{stadtname}"):
-                st.session_state.staedte_liste.remove(stadtname)
+            # Entfernen-Button pro Stadt (ID als key -> bei gleichen Namen eindeutig)
+            if st.button(f"❌ {stadtname}", key=f"entfernen_{stadt_id}"):
+                st.session_state.staedte_liste.remove(stadt_id)
                 st.rerun()
 
             try:
@@ -261,10 +268,11 @@ if st.session_state.staedte_liste:
     karte.options["maxBounds"] = [[-90, -180], [90, 180]]  # auf eine Welt begrenzen
     staedte_db = datenbank.alle_staedte()
 
-    for stadtname in st.session_state.staedte_liste:
-        stadt = next((s for s in staedte_db if s["name"] == stadtname), None)
+    for stadt_id in st.session_state.staedte_liste:
+        stadt = next((s for s in staedte_db if s["id"] == stadt_id), None)
         if not stadt:
             continue
+        stadtname = stadt["name"]
         try:
             wetter = wetter_aktuell_cached(
                 stadt["breitengrad"], stadt["laengengrad"], stadtname=stadtname
@@ -323,10 +331,14 @@ if len(st.session_state.staedte_liste) > 1:
     # Daten fuer logik.staedte_vergleich() sammeln (Name + Prognose je Stadt)
     vergleich_daten = []
 
-    for stadtname in st.session_state.staedte_liste:
-        stadt = next((s for s in staedte_db if s["name"] == stadtname), None)
+    for stadt_id in st.session_state.staedte_liste:
+        stadt = next((s for s in staedte_db if s["id"] == stadt_id), None)
         if not stadt:
             continue
+        stadtname = stadt["name"]
+        # Anzeigename mit Land -- damit zwei gleichnamige Staedte (z. B. zwei
+        # Dresdens) in Superlativen und Tabelle unterscheidbar bleiben.
+        anzeigename = f"{stadt['name']} ({stadt['land']})"
         try:
             wetter = wetter_aktuell_cached(
                 stadt["breitengrad"], stadt["laengengrad"], stadtname=stadtname
@@ -336,30 +348,30 @@ if len(st.session_state.staedte_liste) > 1:
             )
 
             # Prognose fuer die Vergleichstabelle merken
-            vergleich_daten.append({"name": stadtname, "prognose": prognose})
+            vergleich_daten.append({"name": anzeigename, "prognose": prognose})
 
             # niedrigster Wettercode = klarster Himmel = "sonnigste"
             if wetter["wettercode"] < min_wettercode:
                 min_wettercode = wetter["wettercode"]
-                sonnigste = (stadtname, wetter["temperatur"])
+                sonnigste = (anzeigename, wetter["temperatur"])
 
             # hoechste Niederschlagssumme ueber die Prognosetage
             gesamt = sum(tag["niederschlag"] for tag in prognose)
             if gesamt > max_niederschlag:
                 max_niederschlag = gesamt
-                verregnetste = (stadtname, gesamt, wetter["temperatur"])
+                verregnetste = (anzeigename, gesamt, wetter["temperatur"])
 
             # hoechste durchschnittliche Tageshoechsttemperatur
             avg_max = sum(tag["temperatur_max"] for tag in prognose) / len(prognose)
             if avg_max > max_temp:
                 max_temp = avg_max
-                waermste = (stadtname, round(avg_max, 1))
+                waermste = (anzeigename, round(avg_max, 1))
 
             # niedrigste durchschnittliche Tagestiefsttemperatur
             avg_min = sum(tag["temperatur_min"] for tag in prognose) / len(prognose)
             if avg_min < min_temp:
                 min_temp = avg_min
-                kaelteste = (stadtname, round(avg_min, 1))
+                kaelteste = (anzeigename, round(avg_min, 1))
 
         except RuntimeError:
             pass

@@ -60,11 +60,11 @@ Reisewetter: Reiseziel eingeben, Klimaübersicht mit Monatsdiagrammen für Tempe
 ## Projektstruktur
 
     staedte_dashboard/
-    ├── app.py                  # Streamlit-Frontend
+    ├── app.py                  # Streamlit-Frontend und Einstiegspunkt
     ├── api_client.py           # API-Abrufe (Open-Meteo, wttr.in, REST Countries, Geocoding)
     ├── datenbank.py            # SQLite-Datenbankzugriff
     ├── logik.py                # Berechnungen mit pandas, Wettericon-Mapping
-    ├── main.py                 # Einstiegspunkt
+    ├── main.py                 # 
     ├── Clouds_background.jpg   # Hintergrundbild
     ├── daten/
     │   └── projekt.db          # SQLite-Datenbank (wird automatisch angelegt)

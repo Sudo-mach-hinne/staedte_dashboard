@@ -37,11 +37,12 @@ def initialisiere_datenbank():
         verbindung.execute("""
             CREATE TABLE IF NOT EXISTS staedte (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                name        TEXT NOT NULL UNIQUE,
+                name        TEXT NOT NULL,
                 land        TEXT,
                 breitengrad REAL,
                 laengengrad REAL,
-                angelegt_am TEXT DEFAULT CURRENT_TIMESTAMP
+                angelegt_am TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (breitengrad, laengengrad)
             )
         """)
 
@@ -88,17 +89,28 @@ def stadt_einfuegen(name, land, lat, lon):
         lon  (float) -- Laengengrad
 
     Rueckgabe:
-        int -- ID der neu eingefuegten Zeile,
-               oder 0 wenn die Stadt bereits vorhanden war.
+        int -- ID der Stadt. Bei einer neuen Stadt die neu vergebene ID,
+               bei einer bereits vorhandenen Stadt (gleiche Koordinaten)
+               die ID des bestehenden Eintrags. So bekommt der Aufrufer
+               immer eine gueltige ID zurueck.
     """
     with closing(sqlite3.connect(DB_PFAD)) as verbindung:
-        cursor = verbindung.execute(
+        # Neue Stadt anlegen. Existiert die Koordinate schon, passiert nichts
+        # (INSERT OR IGNORE greift wegen UNIQUE auf breitengrad/laengengrad).
+        verbindung.execute(
             "INSERT OR IGNORE INTO staedte (name, land, breitengrad, laengengrad) "
             "VALUES (?, ?, ?, ?)",
             (name, land, lat, lon)
         )
         verbindung.commit()
-        return cursor.lastrowid
+
+        # ID ueber die Koordinaten holen -- funktioniert sowohl fuer die eben
+        # eingefuegte als auch fuer eine bereits vorhandene Stadt.
+        zeile = verbindung.execute(
+            "SELECT id FROM staedte WHERE breitengrad = ? AND laengengrad = ?",
+            (lat, lon)
+        ).fetchone()
+        return zeile[0] if zeile else None
 
 
 def stadt_loeschen(stadt_id):

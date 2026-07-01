@@ -1,7 +1,7 @@
 """
 Modulname: logik.py
 Beschreibung: Berechnungen und Auswertungen mit pandas.
-              Kein Datenbankzugriff, keine API-Aufrufe — nur reine Logik.
+Kein Datenbankzugriff, keine API-Aufrufe, nur reine Logik.
 Autor: Anne-Katrin Dittmann
 Datum: 2. Juni 2026
 """
@@ -15,11 +15,11 @@ def durchschnittstemperatur(wetterdaten):
 
     Parameter:
         wetterdaten (list): Liste von Dicts aus datenbank.wetterdaten_nach_stadt().
-                            Jeder Dict muss das Feld 'temperatur' (float) enthalten.
+        Jeder Dict muss das Feld 'temperatur' (float) enthalten.
 
     Rueckgabe:
         float -- Durchschnittstemperatur gerundet auf 2 Nachkommastellen,
-                 oder None wenn die Liste leer ist.
+        oder None wenn die Liste leer ist.
     """
     if not wetterdaten:
         return None
@@ -34,7 +34,7 @@ def temperatur_extremwerte(wetterdaten):
 
     Parameter:
         wetterdaten (list): Liste von Dicts aus datenbank.wetterdaten_nach_stadt().
-                            Jeder Dict muss das Feld 'temperatur' (float) enthalten.
+        Jeder Dict muss das Feld 'temperatur' (float) enthalten.
 
     Rueckgabe:
         dict mit den Schlüsseln:
@@ -132,7 +132,7 @@ def wettercode_zu_icon(wettercode):
 
     Rueckgabe:
         str -- CSS-Klassenname fuer die Weather-Icons Bibliothek.
-               'wi wi-na' fuer unbekannte Codes.
+        'wi wi-na' fuer unbekannte Codes.
     """
     if wettercode == 0:
         return "wi wi-day-sunny"
