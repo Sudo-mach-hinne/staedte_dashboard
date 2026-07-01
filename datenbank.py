@@ -39,6 +39,7 @@ def initialisiere_datenbank():
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 name        TEXT NOT NULL,
                 land        TEXT,
+                region      TEXT,
                 breitengrad REAL,
                 laengengrad REAL,
                 angelegt_am TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -74,19 +75,36 @@ def initialisiere_datenbank():
             )
         """)
 
+        # ─────────────────────────────────────────────
+        # SCHEMA-MIGRATION
+        # CREATE TABLE IF NOT EXISTS aendert eine bereits bestehende Tabelle
+        # NICHT. Aeltere Datenbanken haben die Spalte 'region' noch nicht.
+        # Deshalb hier pruefen und bei Bedarf per ALTER TABLE nachruesten --
+        # so muss keine Datenbank geloescht werden und es gehen keine Daten
+        # verloren.
+        # ─────────────────────────────────────────────
+        vorhandene_spalten = [
+            spalte[1] for spalte in verbindung.execute("PRAGMA table_info(staedte)")
+        ]
+        if "region" not in vorhandene_spalten:
+            verbindung.execute("ALTER TABLE staedte ADD COLUMN region TEXT")
+
         verbindung.commit()
 
 
-def stadt_einfuegen(name, land, lat, lon):
+def stadt_einfuegen(name, land, lat, lon, region=""):
     """
     Speichert eine neue Stadt in der Datenbank.
-    Bereits vorhandene Staedte werden ignoriert (INSERT OR IGNORE).
+    Bereits vorhandene Staedte (gleiche Koordinaten) werden ignoriert
+    (INSERT OR IGNORE).
 
     Parameter:
-        name (str)  -- Stadtname
-        land (str)  -- Landesname
+        name (str)   -- Stadtname
+        land (str)   -- Landesname
         lat  (float) -- Breitengrad
         lon  (float) -- Laengengrad
+        region (str) -- Bundesland / Region (optional, zur besseren
+                        geografischen Abgrenzung gleichnamiger Orte)
 
     Rueckgabe:
         int -- ID der Stadt. Bei einer neuen Stadt die neu vergebene ID,
@@ -98,10 +116,19 @@ def stadt_einfuegen(name, land, lat, lon):
         # Neue Stadt anlegen. Existiert die Koordinate schon, passiert nichts
         # (INSERT OR IGNORE greift wegen UNIQUE auf breitengrad/laengengrad).
         verbindung.execute(
-            "INSERT OR IGNORE INTO staedte (name, land, breitengrad, laengengrad) "
-            "VALUES (?, ?, ?, ?)",
-            (name, land, lat, lon)
+            "INSERT OR IGNORE INTO staedte (name, land, region, breitengrad, laengengrad) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (name, land, region, lat, lon)
         )
+        # Region auch bei bereits vorhandenen Staedten nachtragen, falls sie
+        # dort noch fehlt (z. B. Eintraege aus einer aelteren Datenbankversion).
+        if region:
+            verbindung.execute(
+                "UPDATE staedte SET region = ? "
+                "WHERE breitengrad = ? AND laengengrad = ? "
+                "AND (region IS NULL OR region = '')",
+                (region, lat, lon)
+            )
         verbindung.commit()
 
         # ID ueber die Koordinaten holen -- funktioniert sowohl fuer die eben

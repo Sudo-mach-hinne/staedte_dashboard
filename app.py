@@ -73,7 +73,8 @@ if "staedte_liste" not in st.session_state:
             if treffer:
                 geo = treffer[0]   # erster Treffer als Standard
                 stadt_id = datenbank.stadt_einfuegen(
-                    geo["name"], geo["land"], geo["breitengrad"], geo["laengengrad"]
+                    geo["name"], geo["land"], geo["breitengrad"], geo["laengengrad"],
+                    region=geo.get("region", "")
                 )
                 # Wir merken uns die eindeutige ID, nicht den Namen.
                 if stadt_id and stadt_id not in st.session_state.staedte_liste:
@@ -117,7 +118,8 @@ with col_button:
                     # Eindeutiger Treffer: direkt uebernehmen
                     geo = treffer[0]
                     stadt_id = datenbank.stadt_einfuegen(
-                        geo["name"], geo["land"], geo["breitengrad"], geo["laengengrad"]
+                        geo["name"], geo["land"], geo["breitengrad"], geo["laengengrad"],
+                        region=geo.get("region", "")
                     )
                     # Dublette wird jetzt ueber die eindeutige ID geprueft, nicht
                     # ueber den Namen. So sind gleichnamige Staedte (z. B. zwei
@@ -140,19 +142,32 @@ with col_button:
 # ─────────────────────────────────────────────
 if "treffer" in st.session_state and st.session_state.treffer:
     st.info("🌍 Mehrere Städte gefunden – welche meinst du?")
-    for geo in st.session_state.treffer:
+    for i, geo in enumerate(st.session_state.treffer):
         label = f"{geo['name']} — {geo['region']}, {geo['land']}"
-        # key muss eindeutig sein -> Koordinaten anhaengen
-        if st.button(label, key=f"treffer_{geo['breitengrad']}_{geo['laengengrad']}"):
+        # Eindeutiger key ueber den Listenindex. (Koordinaten sind als key
+        # ungeeignet, weil manche Treffer identische Koordinaten haben und
+        # dann in Streamlit kollidieren -- der Button funktioniert dann nicht.)
+        if st.button(label, key=f"treffer_{i}"):
             stadt_id = datenbank.stadt_einfuegen(
-                geo["name"], geo["land"], geo["breitengrad"], geo["laengengrad"]
+                geo["name"], geo["land"], geo["breitengrad"], geo["laengengrad"],
+                region=geo.get("region", "")
             )
             # Auch hier: ueber die ID pruefen. Zwei gleichnamige Orte an
             # verschiedenen Koordinaten erhalten verschiedene IDs.
             if stadt_id and stadt_id not in st.session_state.staedte_liste:
                 st.session_state.staedte_liste.append(stadt_id)
+            elif stadt_id:
+                # Stadt ist schon in der Liste -> Hinweis fuer den naechsten
+                # Durchlauf merken (die Auswahl wird gleich geleert).
+                st.session_state["auswahl_hinweis"] = (
+                    f"{geo['name']} ({geo.get('region', '')}) ist bereits in deiner Liste."
+                )
             st.session_state.treffer = []   # Auswahl leeren
             st.rerun()
+
+# Hinweis anzeigen, falls eine bereits vorhandene Stadt gewaehlt wurde
+if st.session_state.get("auswahl_hinweis"):
+    st.info("🏙️ " + st.session_state.pop("auswahl_hinweis"))
 
 st.divider()
 
@@ -211,7 +226,12 @@ else:
                     )
 
                 st.subheader(f"{stadtname}")
-                st.caption(f"{stadt['land']}")
+                # Region (Bundesland) + Land zur besseren geografischen
+                # Abgrenzung -- Region nur zeigen, wenn sie vorhanden ist.
+                if stadt.get("region"):
+                    st.caption(f"{stadt['region']}, {stadt['land']}")
+                else:
+                    st.caption(f"{stadt['land']}")
 
                 # Wettercode -> Icon-CSS-Klasse (weather-icons-Font)
                 icon_klasse = logik.wettercode_zu_icon(wetter["wettercode"])

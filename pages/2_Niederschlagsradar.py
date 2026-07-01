@@ -1,9 +1,10 @@
 """
 Modulname: 2_Niederschlagsradar.py
 Beschreibung: Streamlit-Unterseite -- Niederschlagsradar (RainViewer).
-Zeigt Radar-Niederschlag als Overlay auf einer Karte. Statt einer
-flackernden Auto-Animation steuert ein Zeitschieberegler, welcher
-Radar-Zeitpunkt angezeigt wird -- das laeuft stabil im Streamlit-Modell.
+Zeigt den Niederschlag der letzten zwei Stunden als animiertes Radar-Overlay
+auf einer Karte. Die Animation laeuft direkt im Browser (JavaScript), nicht
+ueber Streamlit-Reruns -- dadurch flackert nichts. Zusaetzlich gibt es eine
+Zukunfts-Ansicht mit stuendlicher Vorhersage aus Open-Meteo.
 
 Autor: Anne-Katrin Dittmann
 Datum: Juni 2026
@@ -13,9 +14,11 @@ import streamlit as st
 import requests
 import folium
 from streamlit_folium import st_folium
+import streamlit.components.v1 as components
 import plotly.express as px
 import pandas as pd
 import datetime
+import json
 import api_client
 import stil
 
@@ -37,8 +40,9 @@ RAINVIEWER_API = "https://api.rainviewer.com/public/weather-maps.json"
 # ─────────────────────────────────────────────
 st.title("🌧️ Niederschlagsradar")
 st.markdown(
-    "Gib einen Ort ein und sieh dir den Niederschlag der letzten zwei Stunden an. "
-    "Mit dem Zeitschieberegler bewegst du dich durch die Radarbilder."
+    "Gib einen Ort ein und sieh dir den Niederschlag der letzten zwei Stunden "
+    "als Animation an. Über den Modus kannst du zwischen der Vergangenheit "
+    "(animiertes Radar) und der Zukunft (Vorhersage) umschalten."
 )
 st.divider()
 
@@ -78,6 +82,100 @@ def radar_frames_abrufen():
         return host, frames
     except Exception as fehler:
         raise RuntimeError(f"Radar-Daten nicht erreichbar: {fehler}")
+
+
+# ─────────────────────────────────────────────
+# ANIMIERTE RADAR-KARTE (laeuft im Browser, kein Flackern)
+# Baut eine eigenstaendige Leaflet-Karte, die die Radarbilder der letzten
+# zwei Stunden per JavaScript nacheinander abspielt. Weil die Animation
+# komplett im Browser laeuft (setInterval) und NICHT ueber Streamlit-Reruns,
+# gibt es kein Flackern -- das war frueher das Problem bei der Auto-Animation.
+# ─────────────────────────────────────────────
+def baue_animiertes_radar(host, frames, lat, lon, ortsname):
+    """
+    Erzeugt den HTML-/JavaScript-Code fuer eine animierte Radar-Karte.
+
+    Parameter:
+        host (str)      -- Basis-URL der RainViewer-Kacheln
+        frames (list)   -- vergangene Radar-Frames (je mit 'time' und 'path')
+        lat, lon (float)-- Kartenmittelpunkt
+        ortsname (str)  -- Beschriftung des Ortsmarkers
+
+    Rueckgabe:
+        str -- fertiges HTML zum Einbetten mit components.html()
+    """
+    # Nur die benoetigten Felder als JSON an das JavaScript uebergeben.
+    frames_js = json.dumps([{"time": f["time"], "path": f["path"]} for f in frames])
+
+    template = """
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <div style="font-family: sans-serif;">
+      <div style="margin-bottom:6px;">
+        <button id="radar-toggle"
+          style="padding:5px 14px; cursor:pointer; border-radius:6px;
+                 border:1px solid #888; background:#ffffff; font-size:14px;">
+          &#9208;&#65039; Pause
+        </button>
+        <span style="margin-left:12px; font-size:14px;">
+          Zeitpunkt: <b id="radar-time">--:--</b>
+        </span>
+      </div>
+      <div id="radar-map" style="height:500px; border-radius:8px;"></div>
+    </div>
+    <script>
+      (function() {
+        var map = L.map('radar-map', {maxZoom: 7, minZoom: 3}).setView([__LAT__, __LON__], 7);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+          {attribution: '&copy; OpenStreetMap, &copy; CARTO'}).addTo(map);
+        L.marker([__LAT__, __LON__]).addTo(map).bindTooltip(__NAME__);
+
+        var host = __HOST__;
+        var frames = __FRAMES__;
+
+        // Fuer jeden Zeitpunkt eine Kachel-Ebene vorbereiten.
+        var layers = frames.map(function(f) {
+          return L.tileLayer(host + f.path + '/256/{z}/{x}/{y}/2/1_1.png', {opacity: 0.65});
+        });
+
+        var idx = 0, current = null, playing = true;
+        var timeEl = document.getElementById('radar-time');
+
+        function show(i) {
+          if (current) { map.removeLayer(current); }
+          current = layers[i];
+          current.addTo(map);
+          var d = new Date(frames[i].time * 1000);
+          timeEl.textContent = d.toLocaleTimeString('de-DE',
+            {hour: '2-digit', minute: '2-digit'});
+        }
+
+        if (layers.length > 0) { show(0); }
+
+        // Alle 0,6 Sekunden zum naechsten Bild springen (Endlosschleife).
+        setInterval(function() {
+          if (!playing || layers.length === 0) { return; }
+          idx = (idx + 1) % layers.length;
+          show(idx);
+        }, 600);
+
+        // Play/Pause-Schalter
+        document.getElementById('radar-toggle').onclick = function() {
+          playing = !playing;
+          this.innerHTML = playing ? '&#9208;&#65039; Pause' : '&#9654;&#65039; Play';
+        };
+      })();
+    </script>
+    """
+
+    return (
+        template
+        .replace("__LAT__", str(lat))
+        .replace("__LON__", str(lon))
+        .replace("__HOST__", json.dumps(host))
+        .replace("__FRAMES__", frames_js)
+        .replace("__NAME__", json.dumps(ortsname))
+    )
 
 
 # ─────────────────────────────────────────────
@@ -185,64 +283,48 @@ if st.session_state.get("radar_gewaehlt"):
         horizontal=True,
     )
 
-    # ─────────────────────────────────────────
-    # KARTE BAUEN (Grundkarte fuer beide Modi gleich)
-    # zoom_start=7, weil RainViewer-Radar nur bis Zoomstufe 7 Kacheln liefert.
-    # ─────────────────────────────────────────
-    karte = folium.Map(
-        location=[geo["breitengrad"], geo["laengengrad"]],
-        zoom_start=7,
-        max_zoom=7,
-        tiles="CartoDB positron",
-    )
-
     # Ortsname (+ Bundesland) fuer Tooltip/Popup
     if geo.get("region"):
         marker_text = f"{geo['name']}, {geo['region']}"
     else:
         marker_text = geo["name"]
 
-    if modus.startswith("🛰️"):
-        # ----- VERGANGENHEIT: RainViewer-Radarflaeche -----
-        zeit_labels = [
-            datetime.datetime.fromtimestamp(f["time"]).strftime("%H:%M")
-            for f in vergangene_frames
-        ]
-        gewaehltes_label = st.select_slider(
-            "Zeitpunkt der Radarmessung",
-            options=zeit_labels,
-            value=zeit_labels[-1],
+    if "Vergangenheit" in modus:
+        # ───── VERGANGENHEIT: animiertes RainViewer-Radar ─────
+        # Die Radarbilder der letzten zwei Stunden werden im Browser als
+        # Animation abgespielt (kein Streamlit-Rerun -> kein Flackern).
+        radar_html = baue_animiertes_radar(
+            host,
+            vergangene_frames,
+            geo["breitengrad"],
+            geo["laengengrad"],
+            marker_text,
         )
-        aktiver_frame = vergangene_frames[zeit_labels.index(gewaehltes_label)]
-
-        # {z}/{x}/{y} fuellt folium automatisch; 256 = Kachelgroesse,
-        # 2 = Farbschema, 1_1 = geglaettet + mit Schatten.
-        tile_url = f"{host}{aktiver_frame['path']}/256/{{z}}/{{x}}/{{y}}/2/1_1.png"
-        folium.TileLayer(
-            tiles=tile_url,
-            attr="RainViewer",
-            name="Niederschlag",
-            opacity=0.65,
-            overlay=True,
-            control=False,
-        ).add_to(karte)
-
-        folium.Marker(
-            [geo["breitengrad"], geo["laengengrad"]],
-            tooltip=marker_text,
-            popup=marker_text,
-        ).add_to(karte)
-
-        karten_caption = (
-            f"Vergangene Radarmessung um {gewaehltes_label} Uhr • "
-            "Quelle: RainViewer • Blau = leichter, Gelb/Rot = starker Niederschlag"
+        components.html(radar_html, height=580)
+        st.caption(
+            "Animiertes Radar der letzten zwei Stunden • Quelle: RainViewer • "
+            "Blau = leichter, Gelb/Rot = starker Niederschlag"
         )
 
     else:
-        # ----- ZUKUNFT: Vorhersage als farbiger Kreis-Marker -----
+        # ───── ZUKUNFT: Vorhersage als farbiger Kreis-Marker (folium) ─────
+        # zoom_start=7, weil RainViewer-Radar nur bis Zoomstufe 7 Kacheln liefert.
+        karte = folium.Map(
+            location=[geo["breitengrad"], geo["laengengrad"]],
+            zoom_start=7,
+            max_zoom=7,
+            tiles="CartoDB positron",
+        )
+
+        karten_caption = ""
+
         if not kommende:
             st.info("Keine Vorhersagedaten für die nächsten 24 Stunden verfügbar.")
-            karten_caption = ""
+            # Trotzdem den Ort markieren
+            folium.Marker(
+                [geo["breitengrad"], geo["laengengrad"]],
+                tooltip=marker_text,
+            ).add_to(karte)
         else:
             # Zeitregler ueber die kommenden Stunden
             stunden_labels = [k["zeit"].strftime("%a %H:%M") for k in kommende]
@@ -324,20 +406,17 @@ if st.session_state.get("radar_gewaehlt"):
                 f"({_stufe_text(mm)}) • Quelle: Open-Meteo"
             )
 
-    # ─────────────────────────────────────────
-    # KARTE ANZEIGEN (einmal, fuer beide Modi)
-    # Fester key gegen Flackern: streamlit-folium erkennt dieselbe Karte.
-    # ─────────────────────────────────────────
-    st_folium(
-        karte,
-        width=None,
-        height=500,
-        key="radar_karte",
-        returned_objects=[],
-    )
+        # Karte anzeigen. Fester key gegen Flackern.
+        st_folium(
+            karte,
+            width=None,
+            height=500,
+            key="radar_karte",
+            returned_objects=[],
+        )
 
-    if karten_caption:
-        st.caption(karten_caption)
+        if karten_caption:
+            st.caption(karten_caption)
 
     # ─────────────────────────────────────────────
     # VORHERSAGE-ÜBERSICHT (Diagramm)
