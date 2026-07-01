@@ -15,11 +15,11 @@ def durchschnittstemperatur(wetterdaten):
 
     Parameter:
         wetterdaten (list): Liste von Dicts aus datenbank.wetterdaten_nach_stadt().
-        Jeder Dict muss das Feld 'temperatur' (float) enthalten.
+            Jeder Dict muss das Feld 'temperatur' (float) enthalten.
 
-    Rueckgabe:
-        float -- Durchschnittstemperatur gerundet auf 2 Nachkommastellen,
-        oder None wenn die Liste leer ist.
+    Rückgabe:
+        float oder None: Durchschnittstemperatur gerundet auf 2 Nachkommastellen,
+            oder None wenn die Liste leer ist
     """
     if not wetterdaten:
         return None
@@ -30,17 +30,17 @@ def durchschnittstemperatur(wetterdaten):
 
 def temperatur_extremwerte(wetterdaten):
     """
-    Berechnet Hoechst- und Tiefstwerte aus gespeicherten Wetterdaten.
+    Berechnet Höchst- und Tiefstwerte aus gespeicherten Wetterdaten.
 
     Parameter:
         wetterdaten (list): Liste von Dicts aus datenbank.wetterdaten_nach_stadt().
-        Jeder Dict muss das Feld 'temperatur' (float) enthalten.
+            Jeder Dict muss das Feld 'temperatur' (float) enthalten.
 
-    Rueckgabe:
-        dict mit den Schlüsseln:
-            'minimum' (float) -- niedrigste gemessene Temperatur
-            'maximum' (float) -- hoechste gemessene Temperatur
-        oder None wenn die Liste leer ist.
+    Rückgabe:
+        dict oder None: Dict mit den Feldern
+            minimum (float): niedrigste gemessene Temperatur
+            maximum (float): höchste gemessene Temperatur
+            oder None wenn die Liste leer ist
     """
     if not wetterdaten:
         return None
@@ -54,17 +54,17 @@ def temperatur_extremwerte(wetterdaten):
 
 def staedte_vergleich(staedte_daten):
     """
-    Vergleicht mehrere Staedte anhand ihrer Prognosedaten.
+    Vergleicht mehrere Städte anhand ihrer Prognosedaten.
 
     Parameter:
-        staedte_daten (list): Liste von Dicts, jeweils mit:
-            'name'     (str)  -- Stadtname
-            'prognose' (list) -- Prognosedaten aus datenbank.prognose_nach_stadt()
+        staedte_daten (list): Liste von Dicts, je einer pro Stadt mit
+            name (str): Stadtname
+            prognose (list): Prognosedaten aus datenbank.prognose_nach_stadt()
 
-    Rueckgabe:
-        pandas DataFrame mit einer Zeile pro Stadt, sortiert nach
-        Durchschnittstemperatur Max absteigend.
-        Leerer DataFrame wenn keine Daten vorhanden.
+    Rückgabe:
+        pandas.DataFrame: Eine Zeile pro Stadt, sortiert nach
+            Durchschnittstemperatur Max absteigend.
+            Leerer DataFrame, wenn keine Daten vorhanden sind
     """
     ergebnis = []
 
@@ -97,11 +97,11 @@ def prognose_als_dataframe(prognose):
     Wandelt eine Prognoseliste in einen sortierten pandas DataFrame um.
 
     Parameter:
-        prognose (list): Liste von Dicts aus datenbank.prognose_nach_stadt().
+        prognose (list): Liste von Dicts aus datenbank.prognose_nach_stadt()
 
-    Rueckgabe:
-        pandas DataFrame sortiert nach Datum (aufsteigend),
-        oder leerer DataFrame wenn keine Daten vorhanden.
+    Rückgabe:
+        pandas.DataFrame: Sortiert nach Datum (aufsteigend),
+            oder leerer DataFrame, wenn keine Daten vorhanden sind
     """
     if not prognose:
         return pd.DataFrame()
@@ -116,23 +116,23 @@ def prognose_als_dataframe(prognose):
 
 def wettercode_zu_icon(wettercode):
     """
-    Gibt einen Weather-Icons CSS-Klassennamen fuer einen WMO-Wettercode zurueck.
+    Gibt einen Weather-Icons-CSS-Klassennamen für einen WMO-Wettercode zurück.
 
     WMO-Wettercodes (Auswahl):
-        0        -- Klarer Himmel
-        1, 2     -- Ueberwiegend klar / teilweise bewoelkt
-        3        -- Bedeckt
-        51-67    -- Nieselregen / Regen
-        71-77    -- Schneefall
-        80-82    -- Regenschauer
-        95-99    -- Gewitter
+        0: Klarer Himmel
+        1, 2: Überwiegend klar / teilweise bewölkt
+        3: Bedeckt
+        51-67: Nieselregen / Regen
+        71-77: Schneefall
+        80-82: Regenschauer
+        95-99: Gewitter
 
     Parameter:
-        wettercode (int): WMO-Wettercode aus der Open-Meteo API.
+        wettercode (int): WMO-Wettercode aus der Open-Meteo API
 
-    Rueckgabe:
-        str -- CSS-Klassenname fuer die Weather-Icons Bibliothek.
-        'wi wi-na' fuer unbekannte Codes.
+    Rückgabe:
+        str: CSS-Klassenname für die Weather-Icons-Bibliothek,
+            'wi wi-na' für unbekannte Codes
     """
     if wettercode == 0:
         return "wi wi-day-sunny"

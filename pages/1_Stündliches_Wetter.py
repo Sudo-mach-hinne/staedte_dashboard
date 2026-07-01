@@ -1,6 +1,7 @@
 """
-Modulname: Stuendliches_Wetter.py
-Beschreibung: Streamlit-Unterseite -- Stündliches Wetter (kombiniertes Diagramm)
+Modulname: 1_Stündliches_Wetter.py
+Beschreibung: Streamlit-Unterseite -- Stündliches Wetter. Zeigt zu einer gesuchten Stadt die stündliche Vorhersage der naechsten Tage aus Open-Meteo als kombiniertes Diagramm (Temperatur als Linie, Niederschlag als Balken) sowie Kennzahlen zu Hoechst-/Tiefsttemperatur und Gesamtniederschlag.
+
 Autor: Anne-Katrin Dittmann
 Datum: Juni 2026
 """

@@ -1,6 +1,11 @@
 """
-Modulname: Reisewetter.py
-Beschreibung: Streamlit-Unterseite -- Reisewetter mit Jahresübersicht
+Modulname: 3_Reisewetter.py
+Beschreibung: Streamlit-Unterseite -- Reisewetter.
+Zeigt zu einem gesuchten Reiseziel eine klimatologische Jahresübersicht
+(Monatsdurchschnitte 1991-2020) aus der Open-Meteo Climate API. Hilft bei
+der Reiseplanung: waermster/trockenster Monat als Kennzahl, sowie Diagramme
+zu Temperatur- und Niederschlagsverlauf uebers Jahr.
+
 Autor: Anne-Katrin Dittmann
 Datum: Juni 2026
 """

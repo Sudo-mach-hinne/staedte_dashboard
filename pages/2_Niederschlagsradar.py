@@ -55,13 +55,16 @@ st.divider()
 @st.cache_data(ttl=300)
 def radar_frames_abrufen():
     """
-    Holt die verfuegbaren Radar-Zeitpunkte von RainViewer.
+    Holt die verfügbaren Radar-Zeitpunkte von RainViewer.
 
-    Rueckgabe:
-        Tupel (host, frames):
-            host (str)   -- Basis-URL fuer die Radar-Kacheln
-            frames (list)-- Liste von Dicts, je Zeitpunkt mit 'time' und 'path'
-        oder loest RuntimeError bei Fehler aus.
+    Rückgabe:
+        tuple: (host, frames)
+            host (str): Basis-URL für die Radar-Kacheln
+            frames (list): Liste von Dicts, je ein Zeitpunkt mit 'time',
+                'path' und 'prognose' (bool)
+
+    Fehler:
+        RuntimeError: Wenn die RainViewer-API nicht erreichbar ist
     """
     try:
         antwort = requests.get(RAINVIEWER_API, timeout=10)
@@ -93,16 +96,17 @@ def radar_frames_abrufen():
 # ─────────────────────────────────────────────
 def baue_animiertes_radar(host, frames, lat, lon, ortsname):
     """
-    Erzeugt den HTML-/JavaScript-Code fuer eine animierte Radar-Karte.
+    Erzeugt den HTML-/JavaScript-Code für eine animierte Radar-Karte.
 
     Parameter:
-        host (str)      -- Basis-URL der RainViewer-Kacheln
-        frames (list)   -- vergangene Radar-Frames (je mit 'time' und 'path')
-        lat, lon (float)-- Kartenmittelpunkt
-        ortsname (str)  -- Beschriftung des Ortsmarkers
+        host (str): Basis-URL der RainViewer-Kacheln
+        frames (list): Vergangene Radar-Frames (je mit 'time' und 'path')
+        lat (float): Breitengrad des Kartenmittelpunkts
+        lon (float): Längengrad des Kartenmittelpunkts
+        ortsname (str): Beschriftung des Ortsmarkers
 
-    Rueckgabe:
-        str -- fertiges HTML zum Einbetten mit components.html()
+    Rückgabe:
+        str: Fertiges HTML zum Einbetten mit components.html()
     """
     # Nur die benoetigten Felder als JSON an das JavaScript uebergeben.
     frames_js = json.dumps([{"time": f["time"], "path": f["path"]} for f in frames])
@@ -344,8 +348,18 @@ if st.session_state.get("radar_gewaehlt"):
             # ─────────────────────────────────────
             def _kreis_eigenschaften(menge):
                 """
-                Liefert (radius, farbe, deckkraft) fuer eine Regenmenge in mm.
-                Farbe wird zwischen Hellblau und Tiefblau interpoliert.
+                Berechnet Radius, Farbe und Deckkraft eines Kreis-Markers
+                passend zu einer Regenmenge. Farbe wird zwischen Hellblau
+                (wenig Regen) und Tiefblau (viel Regen) interpoliert.
+
+                Parameter:
+                    menge (float): Niederschlagsmenge in mm
+
+                Rückgabe:
+                    tuple: (radius, farbe, deckkraft)
+                        radius (int): Kreisradius in Pixeln
+                        farbe (str): Farbe als Hex-Code
+                        deckkraft (float): Deckkraft zwischen 0.0 und 1.0
                 """
                 # Kein nennenswerter Regen -> winzig und fast transparent
                 if menge < 0.1:
@@ -370,6 +384,15 @@ if st.session_state.get("radar_gewaehlt"):
                 return radius, farbe, 1.0  # voll ausgefuellt (Deckkraft 1.0)
 
             def _stufe_text(menge):
+                """
+                Übersetzt eine Regenmenge in eine lesbare Beschreibung.
+
+                Parameter:
+                    menge (float): Niederschlagsmenge in mm
+
+                Rückgabe:
+                    str: Beschreibung der Regenstärke (z. B. "leichter Regen")
+                """
                 if menge < 0.1:
                     return "trocken"
                 if menge < 1:

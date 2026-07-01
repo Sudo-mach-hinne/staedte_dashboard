@@ -1,7 +1,9 @@
 """
 Modulname: datenbank.py
 Beschreibung: Alle SQLite-Datenbankoperationen fuer das City Weather Dashboard.
-              Kein API-Zugriff, keine Berechnungen — nur Datenzugriff.
+Kein API-Zugriff und keine Berechnungen. 
+Nur Datenzugriff.
+
 Autor: Anne-Katrin Dittmann
 Datum: 2. Juni 2026
 """
@@ -28,9 +30,9 @@ def initialisiere_datenbank():
     Wird beim Start der Anwendung einmalig aufgerufen.
 
     Tabellen:
-        staedte     -- Verwaltung der gespeicherten Staedte
-        wetterdaten -- Verlauf der abgerufenen aktuellen Wetterdaten
-        prognose    -- Gespeicherte 7-Tage-Prognosedaten
+        staedte: Verwaltung der gespeicherten Städte
+        wetterdaten: Verlauf der abgerufenen aktuellen Wetterdaten
+        prognose: Gespeicherte 7-Tage-Prognosedaten
     """
     with closing(sqlite3.connect(DB_PFAD)) as verbindung:
         # Tabelle: Staedte
@@ -95,22 +97,22 @@ def initialisiere_datenbank():
 def stadt_einfuegen(name, land, lat, lon, region=""):
     """
     Speichert eine neue Stadt in der Datenbank.
-    Bereits vorhandene Staedte (gleiche Koordinaten) werden ignoriert
+    Bereits vorhandene Städte (gleiche Koordinaten) werden ignoriert
     (INSERT OR IGNORE).
 
     Parameter:
-        name (str)   -- Stadtname
-        land (str)   -- Landesname
-        lat  (float) -- Breitengrad
-        lon  (float) -- Laengengrad
-        region (str) -- Bundesland / Region (optional, zur besseren
-                        geografischen Abgrenzung gleichnamiger Orte)
+        name (str): Stadtname
+        land (str): Landesname
+        lat (float): Breitengrad
+        lon (float): Längengrad
+        region (str): Bundesland/Region (optional, zur besseren
+            geografischen Abgrenzung gleichnamiger Orte)
 
-    Rueckgabe:
-        int -- ID der Stadt. Bei einer neuen Stadt die neu vergebene ID,
-               bei einer bereits vorhandenen Stadt (gleiche Koordinaten)
-               die ID des bestehenden Eintrags. So bekommt der Aufrufer
-               immer eine gueltige ID zurueck.
+    Rückgabe:
+        int: ID der Stadt. Bei einer neuen Stadt die neu vergebene ID,
+            bei einer bereits vorhandenen Stadt (gleiche Koordinaten)
+            die ID des bestehenden Eintrags. So bekommt der Aufrufer
+            immer eine gültige ID zurück.
     """
     with closing(sqlite3.connect(DB_PFAD)) as verbindung:
         # Neue Stadt anlegen. Existiert die Koordinate schon, passiert nichts
@@ -142,10 +144,10 @@ def stadt_einfuegen(name, land, lat, lon, region=""):
 
 def stadt_loeschen(stadt_id):
     """
-    Loescht eine Stadt sowie alle zugehoerigen Wetter- und Prognosedaten.
+    Löscht eine Stadt sowie alle zugehörigen Wetter- und Prognosedaten.
 
     Parameter:
-        stadt_id (int) -- ID der zu loeschenden Stadt
+        stadt_id (int): ID der zu löschenden Stadt
     """
     with closing(sqlite3.connect(DB_PFAD)) as verbindung:
         # Zuerst abhaengige Datensaetze loeschen, dann die Stadt selbst
@@ -157,10 +159,10 @@ def stadt_loeschen(stadt_id):
 
 def alle_staedte():
     """
-    Liefert alle gespeicherten Staedte.
+    Liefert alle gespeicherten Städte.
 
-    Rueckgabe:
-        list -- Liste von Dicts, je ein Dict pro Stadt.
+    Rückgabe:
+        list: Liste von Dicts, je ein Dict pro Stadt
     """
     with closing(sqlite3.connect(DB_PFAD)) as verbindung:
         verbindung.row_factory = sqlite3.Row
@@ -173,10 +175,10 @@ def stadt_nach_id(stadt_id):
     Liefert eine einzelne Stadt anhand ihrer ID.
 
     Parameter:
-        stadt_id (int) -- ID der gesuchten Stadt
+        stadt_id (int): ID der gesuchten Stadt
 
-    Rueckgabe:
-        dict -- Stadtdaten, oder None wenn nicht gefunden.
+    Rückgabe:
+        dict oder None: Stadtdaten, oder None wenn nicht gefunden
     """
     with closing(sqlite3.connect(DB_PFAD)) as verbindung:
         verbindung.row_factory = sqlite3.Row
@@ -188,15 +190,15 @@ def stadt_nach_id(stadt_id):
 
 def wetterdaten_speichern(stadt_id, temperatur, windgeschwindigkeit, niederschlag, wettercode):
     """
-    Speichert einen aktuellen Wetterdatensatz fuer eine Stadt.
+    Speichert einen aktuellen Wetterdatensatz für eine Stadt.
     Jeder Aufruf erzeugt einen neuen Eintrag mit aktuellem Zeitstempel.
 
     Parameter:
-        stadt_id            (int)   -- ID der Stadt
-        temperatur          (float) -- Aktuelle Temperatur in °C
-        windgeschwindigkeit (float) -- Windgeschwindigkeit in km/h
-        niederschlag        (float) -- Niederschlag in mm
-        wettercode          (int)   -- WMO-Wettercode
+        stadt_id (int): ID der Stadt
+        temperatur (float): Aktuelle Temperatur in °C
+        windgeschwindigkeit (float): Windgeschwindigkeit in km/h
+        niederschlag (float): Niederschlag in mm
+        wettercode (int): WMO-Wettercode
     """
     with closing(sqlite3.connect(DB_PFAD)) as verbindung:
         verbindung.execute(
@@ -213,10 +215,10 @@ def wetterdaten_nach_stadt(stadt_id):
     Liefert alle gespeicherten Wetterdaten einer Stadt, neueste zuerst.
 
     Parameter:
-        stadt_id (int) -- ID der Stadt
+        stadt_id (int): ID der Stadt
 
-    Rueckgabe:
-        list -- Liste von Dicts, je ein Dict pro Wetterdatensatz.
+    Rückgabe:
+        list: Liste von Dicts, je ein Dict pro Wetterdatensatz
     """
     with closing(sqlite3.connect(DB_PFAD)) as verbindung:
         verbindung.row_factory = sqlite3.Row
@@ -229,15 +231,15 @@ def wetterdaten_nach_stadt(stadt_id):
 
 def prognose_speichern(stadt_id, datum, temp_min, temp_max, niederschlag, wettercode):
     """
-    Speichert einen Prognosedatensatz fuer eine Stadt und ein Datum.
+    Speichert einen Prognosedatensatz für eine Stadt und ein Datum.
 
     Parameter:
-        stadt_id    (int)   -- ID der Stadt
-        datum       (str)   -- Prognosedatum im Format YYYY-MM-DD
-        temp_min    (float) -- Tagestiefsttemperatur in °C
-        temp_max    (float) -- Tageshöchsttemperatur in °C
-        niederschlag (float) -- Niederschlagssumme in mm
-        wettercode  (int)   -- WMO-Wettercode
+        stadt_id (int): ID der Stadt
+        datum (str): Prognosedatum im Format YYYY-MM-DD
+        temp_min (float): Tagestiefsttemperatur in °C
+        temp_max (float): Tageshöchsttemperatur in °C
+        niederschlag (float): Niederschlagssumme in mm
+        wettercode (int): WMO-Wettercode
     """
     with closing(sqlite3.connect(DB_PFAD)) as verbindung:
         verbindung.execute(
@@ -254,10 +256,10 @@ def prognose_nach_stadt(stadt_id):
     Liefert alle gespeicherten Prognosedaten einer Stadt, chronologisch sortiert.
 
     Parameter:
-        stadt_id (int) -- ID der Stadt
+        stadt_id (int): ID der Stadt
 
-    Rueckgabe:
-        list -- Liste von Dicts, je ein Dict pro Prognosetag.
+    Rückgabe:
+        list: Liste von Dicts, je ein Dict pro Prognosetag
     """
     with closing(sqlite3.connect(DB_PFAD)) as verbindung:
         verbindung.row_factory = sqlite3.Row

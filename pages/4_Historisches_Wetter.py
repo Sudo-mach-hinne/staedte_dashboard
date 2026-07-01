@@ -1,6 +1,9 @@
 """
-Modulname: Historisches_Wetter.py
-Beschreibung: Streamlit-Unterseite -- Historische Wetterdaten mit Diagrammen
+Modulname: 4_Historisches_Wetter.py
+Beschreibung: Streamlit-Unterseite -- Historisches Wetter.
+Zeigt zu einem gesuchten Ort vergangene Wetterdaten fuer einen frei waehlbaren Zeitraum (ab 1940) aus der Open-Meteo Archive API. 
+Stellt Kennzahlen sowie Temperatur- (Min/Max/Mittel) und Niederschlagsverlauf als Diagramme dar.
+
 Autor: Anne-Katrin Dittmann
 Datum: Juni 2026
 """

@@ -47,13 +47,40 @@ datenbank.initialisiere_datenbank()
 # ─────────────────────────────────────────────
 @st.cache_data(ttl=600)
 def wetter_aktuell_cached(breitengrad, laengengrad, stadtname=None):
-    """Gecachter Aufruf von api_client.wetter_aktuell_abrufen()."""
+    """
+    Gecachter Aufruf von api_client.wetter_aktuell_abrufen() (ttl=600 Sekunden).
+
+    Parameter:
+        breitengrad (float): Breitengrad der Stadt
+        laengengrad (float): Längengrad der Stadt
+        stadtname (str): Name der Stadt (für den Fallback benötigt)
+
+    Rückgabe:
+        dict: Aktuelle Wetterdaten, siehe api_client.wetter_aktuell_abrufen()
+
+    Fehler:
+        RuntimeError: Siehe api_client.wetter_aktuell_abrufen()
+    """
     return api_client.wetter_aktuell_abrufen(breitengrad, laengengrad, stadtname=stadtname)
 
 
 @st.cache_data(ttl=600)
 def prognose_cached(breitengrad, laengengrad, tage=7, stadtname=None):
-    """Gecachter Aufruf von api_client.prognose_abrufen()."""
+    """
+    Gecachter Aufruf von api_client.prognose_abrufen() (ttl=600 Sekunden).
+
+    Parameter:
+        breitengrad (float): Breitengrad der Stadt
+        laengengrad (float): Längengrad der Stadt
+        tage (int): Anzahl der Prognosetage (Standard: 7)
+        stadtname (str): Name der Stadt (für den Fallback benötigt)
+
+    Rückgabe:
+        list: Prognosedaten, siehe api_client.prognose_abrufen()
+
+    Fehler:
+        RuntimeError: Siehe api_client.prognose_abrufen()
+    """
     return api_client.prognose_abrufen(breitengrad, laengengrad, tage=tage, stadtname=stadtname)
 
 

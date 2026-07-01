@@ -24,19 +24,24 @@ KLIMA_URL      = "https://climate-api.open-meteo.com/v1/climate"
 
 def _wetter_fallback_aktuell(stadtname):
     """
-    Fallback: Ruft aktuelle Wetterdaten von wttr.in ab.
+    Ruft aktuelle Wetterdaten aus einer alternativen Wetter-API (wttr.in) ab,
+    falls die Haupt-API (Open-Meteo) nicht verfügbar ist.
 
     Parameter:
         stadtname (str): Name der Stadt
 
-    Rueckgabe:
-        dict mit den Feldern:
+    Rückgabe:
+        dict: Enthält Temperatur, Windgeschwindigkeit, Niederschlag und Wettercode
             temperatur (float)
             windgeschwindigkeit (float)
             niederschlag (float)
             wettercode (int)
-        oder RuntimeError bei Fehler
+
+    Fehler:
+        Exception: Bei Netzwerkfehlern oder unerwarteten Daten (wird vom
+            Aufrufer in wetter_aktuell_abrufen() zu RuntimeError umgewandelt)
     """
+    # wttr.in liefert json1-Format ueber den Query-Parameter "j1"
     url = f"{FALLBACK_URL}/{stadtname}?format=j1"
     antwort = requests.get(url, timeout=API_TIMEOUT)
     antwort.raise_for_status()
@@ -52,20 +57,24 @@ def _wetter_fallback_aktuell(stadtname):
 
 def _wetter_fallback_prognose(stadtname, tage=7):
     """
-    Fallback: Ruft Prognosedaten von wttr.in ab.
+    Ruft Prognosedaten aus einer alternativen Wetter-API (wttr.in) ab,
+    falls die Haupt-API (Open-Meteo) nicht verfügbar ist.
 
     Parameter:
         stadtname (str): Name der Stadt
-        tage (int): Anzahl der Tage (wttr.in liefert max. 3)
+        tage (int): Anzahl der gewünschten Tage (wttr.in liefert max. 3)
 
-    Rueckgabe:
-        Liste von Dicts je Tag mit:
+    Rückgabe:
+        list: Liste von Dicts, je ein Eintrag pro Tag mit
             datum (str)
             temperatur_min (float)
             temperatur_max (float)
             niederschlag (float)
             wettercode (int)
-        oder RuntimeError bei Fehler
+
+    Fehler:
+        Exception: Bei Netzwerkfehlern oder unerwarteten Daten (wird vom
+            Aufrufer in prognose_abrufen() zu RuntimeError umgewandelt)
     """
     url = f"{FALLBACK_URL}/{stadtname}?format=j1"
     antwort = requests.get(url, timeout=API_TIMEOUT)
@@ -91,15 +100,18 @@ def wetter_aktuell_abrufen(breitengrad, laengengrad, stadtname=None):
     Parameter:
         breitengrad (float): Breitengrad der Stadt
         laengengrad (float): Laengengrad der Stadt
-        stadtname (str): Name der Stadt (fuer Fallback benoetigt)
+        stadtname (str): Name der Stadt (für den Fallback benötigt)
 
-    Rueckgabe:
-        dict mit den Feldern:
+    Rückgabe:
+        dict: Enthält Temperatur, Windgeschwindigkeit, Niederschlag und Wettercode
             temperatur (float)
             windgeschwindigkeit (float)
             niederschlag (float)
             wettercode (int)
-        oder RuntimeError bei Fehler
+
+    Fehler:
+        RuntimeError: Wenn weder Open-Meteo noch der Fallback erreichbar sind,
+            oder wenn Open-Meteo fehlschlägt und kein stadtname übergeben wurde
     """
     params = {
         "latitude": breitengrad,
@@ -116,10 +128,12 @@ def wetter_aktuell_abrufen(breitengrad, laengengrad, stadtname=None):
         return {
             "temperatur": wetter["temperature"],
             "windgeschwindigkeit": wetter["windspeed"],
+            # Open-Meteo liefert current_weather ohne Niederschlag -> fest 0.0
             "niederschlag": 0.0,
             "wettercode": wetter["weathercode"],
         }
     except Exception:
+        # Haupt-API nicht erreichbar -> auf wttr.in ausweichen (falls moeglich)
         if stadtname:
             try:
                 return _wetter_fallback_aktuell(stadtname)
@@ -132,23 +146,26 @@ def wetter_aktuell_abrufen(breitengrad, laengengrad, stadtname=None):
 
 def prognose_abrufen(breitengrad, laengengrad, tage=7, stadtname=None):
     """
-    Ruft Prognosedaten fuer mehrere Tage von Open-Meteo ab.
+    Ruft Prognosedaten für mehrere Tage von Open-Meteo ab.
     Bei Fehler: Fallback auf wttr.in (max. 3 Tage, erfordert stadtname).
 
     Parameter:
         breitengrad (float): Breitengrad der Stadt
-        laengengrad (float): Laengengrad der Stadt
+        laengengrad (float): Längengrad der Stadt
         tage (int): Anzahl der Prognosetage (Standard: 7)
-        stadtname (str): Name der Stadt (fuer Fallback benoetigt)
+        stadtname (str): Name der Stadt (für den Fallback benötigt)
 
-    Rueckgabe:
-        Liste von Dicts, je Tag ein Eintrag mit:
+    Rückgabe:
+        list: Liste von Dicts, je ein Eintrag pro Tag mit
             datum (str)
             temperatur_min (float)
             temperatur_max (float)
             niederschlag (float)
             wettercode (int)
-        oder RuntimeError bei Fehler
+
+    Fehler:
+        RuntimeError: Wenn weder Open-Meteo noch der Fallback erreichbar sind,
+            oder wenn Open-Meteo fehlschlägt und kein stadtname übergeben wurde
     """
     params = {
         "latitude": breitengrad,
@@ -173,6 +190,7 @@ def prognose_abrufen(breitengrad, laengengrad, tage=7, stadtname=None):
             })
         return ergebnis
     except Exception:
+        # Haupt-API nicht erreichbar -> auf wttr.in ausweichen (falls moeglich)
         if stadtname:
             try:
                 return _wetter_fallback_prognose(stadtname, tage)
@@ -182,21 +200,24 @@ def prognose_abrufen(breitengrad, laengengrad, tage=7, stadtname=None):
                 )
         raise RuntimeError("Prognose-API nicht erreichbar und kein Stadtname fuer Fallback angegeben.")
 
+
 def stuendlich_abrufen(breitengrad, laengengrad):
     """
     Ruft die stündliche Wettervorhersage von Open-Meteo ab.
 
     Parameter:
-        breitengrad (float)
-        laengengrad (float)
+        breitengrad (float): Breitengrad der Stadt
+        laengengrad (float): Längengrad der Stadt
 
     Rückgabe:
-        Liste von Dicts mit
-            zeit
-            temperatur
-            niederschlag
-    """
+        list: Liste von Dicts, je ein Eintrag pro Stunde mit
+            zeit (str)
+            temperatur (float)
+            niederschlag (float)
 
+    Fehler:
+        RuntimeError: Wenn Open-Meteo nicht erreichbar ist
+    """
     params = {
         "latitude": breitengrad,
         "longitude": laengengrad,
@@ -213,7 +234,6 @@ def stuendlich_abrufen(breitengrad, laengengrad):
         hourly = daten["hourly"]
 
         ergebnis = []
-
         for i in range(len(hourly["time"])):
             ergebnis.append({
                 "zeit": hourly["time"][i],
@@ -228,23 +248,28 @@ def stuendlich_abrufen(breitengrad, laengengrad):
             f"Stündliche Wetterdaten konnten nicht geladen werden: {fehler}"
         )
 
+
 def koordinaten_abrufen(stadtname, count=10):
     """
-    Ruft Koordinaten fuer einen Stadtnamen ueber die Open-Meteo Geocoding API ab.
-    Gibt bis zu 10 Treffer zurueck, damit der Nutzer bei Mehrdeutigkeit auswaehlen kann.
+    Ruft Koordinaten für einen Stadtnamen über die Open-Meteo Geocoding API ab.
+    Gibt bis zu count Treffer zurück, damit der Nutzer bei Mehrdeutigkeit
+    (z. B. mehrere gleichnamige Städte) auswählen kann.
 
     Parameter:
         stadtname (str): Name der Stadt
-        count (int): Anzahl der Treffer (Standard: 10)
+        count (int): Maximale Anzahl der Treffer (Standard: 10)
 
-    Rueckgabe:
-        Liste von Dicts, je Treffer ein Eintrag mit:
+    Rückgabe:
+        list: Liste von Dicts, je ein Treffer mit
             name (str)
             land (str)
             region (str)
             breitengrad (float)
             laengengrad (float)
-        oder RuntimeError wenn Stadt nicht gefunden
+
+    Fehler:
+        RuntimeError: Wenn die Stadt nicht gefunden wurde oder die
+            Geocoding-API nicht erreichbar ist
     """
     url = "https://geocoding-api.open-meteo.com/v1/search"
     params = {
@@ -280,17 +305,17 @@ def koordinaten_abrufen(stadtname, count=10):
 
 def laenderdaten_abrufen(landname):
     """
-    Ruft Laenderfakten von REST Countries ab.
+    Ruft Länderfakten von REST Countries ab.
 
     Parameter:
         landname (str): Name des Landes (z. B. "Germany")
 
-    Rueckgabe:
-        dict mit den Feldern:
+    Rückgabe:
+        dict oder None: Bei Erfolg ein dict mit
             hauptstadt (str)
             waehrung (str)
             sprachen (str)
-        oder None bei Fehler
+        None, falls die API nicht erreichbar ist oder keine Daten liefert
     """
     try:
         url = f"{LAENDER_URL}/{landname}"
@@ -327,17 +352,19 @@ def historisches_wetter_abrufen(breitengrad, laengengrad, datum_von, datum_bis):
 
     Parameter:
         breitengrad (float): Breitengrad der Stadt
-        laengengrad (float): Laengengrad der Stadt
+        laengengrad (float): Längengrad der Stadt
         datum_von (str): Startdatum im Format YYYY-MM-DD
         datum_bis (str): Enddatum im Format YYYY-MM-DD
 
-    Rueckgabe:
-        Liste von Dicts je Tag mit:
+    Rückgabe:
+        list: Liste von Dicts, je ein Eintrag pro Tag mit
             datum (str)
             temperatur_max (float)
             temperatur_min (float)
             niederschlag (float)
-        oder RuntimeError bei Fehler
+
+    Fehler:
+        RuntimeError: Wenn die Archive API nicht erreichbar ist
     """
     params = {
         "latitude": breitengrad,
@@ -368,19 +395,22 @@ def historisches_wetter_abrufen(breitengrad, laengengrad, datum_von, datum_bis):
 def reisewetter_abrufen(breitengrad, laengengrad):
     """
     Ruft klimatologische Monatsdurchschnitte von der Open-Meteo Climate API ab.
-    Liefert eine Jahresuebersicht mit Durchschnittstemperaturen und Niederschlag.
+    Liefert eine Jahresübersicht mit Durchschnittstemperaturen und Niederschlag
+    (Referenzzeitraum 1991-2020).
 
     Parameter:
         breitengrad (float): Breitengrad der Stadt
-        laengengrad (float): Laengengrad der Stadt
+        laengengrad (float): Längengrad der Stadt
 
-    Rueckgabe:
-        Liste von 12 Dicts (Januar bis Dezember) mit:
+    Rückgabe:
+        list: Liste von 12 Dicts (Januar bis Dezember), je ein Eintrag mit
             monat (str)
             temperatur_max (float)
             temperatur_min (float)
             niederschlag (float)
-        oder RuntimeError bei Fehler
+
+    Fehler:
+        RuntimeError: Wenn die Climate API nicht erreichbar ist
     """
     params = {
         "latitude": breitengrad,
@@ -389,7 +419,7 @@ def reisewetter_abrufen(breitengrad, laengengrad):
         "end_date": "2020-12-31",
         "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum",
         "timezone": "Europe/Berlin",
-        "models": "EC_Earth3P_HR",
+        "models": "EC_Earth3P_HR",  # Klimamodell der Open-Meteo Climate API
     }
     try:
         antwort = requests.get(KLIMA_URL, params=params, timeout=30)

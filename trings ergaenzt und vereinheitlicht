@@ -1,0 +1,12 @@
+warning: in the working copy of 'app.py', LF will be replaced by CRLF the next time Git touches it
+ api_client.py                          | 124 [32m++++++++++++++++++++[m[31m-------------[m
+ app.py                                 |  31 [32m++++++++[m[31m-[m
+ datenbank.py                           |  90 [32m++++++++++++[m[31m------------[m
+ logik.py                               |  72 [32m+++++++++[m[31m----------[m
+ main.py                                |   8 [32m+[m[31m--[m
+ "pages/1_St\303\274ndliches_Wetter.py" |   5 [32m+[m[31m-[m
+ pages/2_Niederschlagsradar.py          |  55 [32m++++++++++[m[31m-----[m
+ pages/3_Reisewetter.py                 |   9 [32m++[m[31m-[m
+ pages/4_Historisches_Wetter.py         |   7 [32m+[m[31m-[m
+ stil.py                                |  13 [32m++[m[31m--[m
+ 10 files changed, 251 insertions(+), 163 deletions(-)

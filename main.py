@@ -1,12 +1,8 @@
 """
 Modulname: main.py
-
 Beschreibung: Einstiegspunkt der Anwendung.
-Startet die Streamlit-App (app.py) programmatisch.
-Weil Streamlit-Apps ueber den streamlit-Befehl laufen und nicht
-ueber "python <datei>", ruft main.py hier intern denselben
-Befehl auf. So laesst sich das Projekt sowohl mit
-"python main.py" als auch mit "streamlit run app.py" starten.
+Startet die Streamlit-App (app.py) programmatisch. Weil Streamlit-Apps ueber den streamlit-Befehl laufen und nicht ueber "python <datei>", ruft main.py
+hier intern denselben Befehl auf. So laesst sich das Projekt sowohl mit "python main.py" als auch mit "streamlit run app.py" starten.
 
 Autor: Anne-Katrin Dittmann
 Datum: Juni 2026

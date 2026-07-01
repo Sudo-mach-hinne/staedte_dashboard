@@ -30,7 +30,7 @@ FALLBACK_DUNKEL = (
 
 def _bild_als_css(dateiname, fallback):
     """
-    Baut den CSS-Schnipsel fuer einen Bildhintergrund.
+    Baut den CSS-Schnipsel für einen Bildhintergrund.
 
     Sucht das Bild relativ zum Projekt-Hauptverzeichnis (dem Ordner, in dem
     stil.py liegt). So funktioniert es von der Hauptseite und aus pages/.
@@ -39,8 +39,9 @@ def _bild_als_css(dateiname, fallback):
         dateiname (str): Name der Bilddatei
         fallback (str): CSS-Verlauf, falls das Bild fehlt
 
-    Rueckgabe:
-        str -- CSS fuer 'background' (Bild als Base64) oder der Fallback-Verlauf.
+    Rückgabe:
+        str: CSS für 'background' (Bild als Base64), oder der Fallback-Verlauf
+            falls die Datei nicht gefunden wird
     """
     basis = os.path.dirname(__file__)
     bild_pfad = os.path.join(basis, dateiname)
@@ -60,10 +61,10 @@ def _bild_als_css(dateiname, fallback):
 def _modus_waehler():
     """
     Zeigt oben in der Sidebar einen Hell/Dunkel-Umschalter und merkt sich die
-    Wahl in st.session_state, damit sie ueber alle Seiten hinweg gilt.
+    Wahl in st.session_state, damit sie über alle Seiten hinweg gilt.
 
-    Rueckgabe:
-        str -- "Hell" oder "Dunkel"
+    Rückgabe:
+        str: "Hell" oder "Dunkel"
     """
     # Startwert beim ersten Laden: Hell
     if "design_modus" not in st.session_state:
