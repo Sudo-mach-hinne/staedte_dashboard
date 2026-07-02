@@ -13,6 +13,7 @@ Datum: Juni 2026
 import streamlit as st
 import requests
 import folium
+from folium.plugins import HeatMap
 from streamlit_folium import st_folium
 import streamlit.components.v1 as components
 import plotly.express as px
@@ -52,6 +53,18 @@ st.divider()
 # Die Frames werden nur EINMAL geholt und 5 Minuten zwischengespeichert.
 # Dadurch wird beim Schieben nicht bei jedem Schritt neu geladen.
 # ─────────────────────────────────────────────
+@st.cache_data(ttl=1800)
+def gitter_daten_abrufen(breitengrad, laengengrad):
+    """
+    Gecachte Huelle um api_client.gitter_niederschlag_abrufen(). 30 Minuten
+    Cache, weil sich stuendliche Vorhersagedaten nicht schneller aendern.
+
+    Rückgabe:
+        dict: siehe api_client.gitter_niederschlag_abrufen()
+    """
+    return api_client.gitter_niederschlag_abrufen(breitengrad, laengengrad)
+
+
 @st.cache_data(ttl=300)
 def radar_frames_abrufen():
     """
@@ -313,6 +326,10 @@ if st.session_state.get("radar_gewaehlt"):
     else:
         # ───── ZUKUNFT: Vorhersage als farbiger Kreis-Marker (folium) ─────
         # zoom_start=7, weil RainViewer-Radar nur bis Zoomstufe 7 Kacheln liefert.
+        # Hinweis: folium.Marker() braucht unten explizit icon=folium.Icon(...),
+        # weil Leaflets automatische Pfaderkennung fuer den jsdelivr-CDN-Link
+        # eine kaputte Bild-URL baut (fehlender "/images/"-Teil) -- ohne das
+        # erscheint ein kaputtes Bild-Icon mit sichtbarem Alt-Text auf der Karte.
         karte = folium.Map(
             location=[geo["breitengrad"], geo["laengengrad"]],
             zoom_start=7,
@@ -328,6 +345,7 @@ if st.session_state.get("radar_gewaehlt"):
             folium.Marker(
                 [geo["breitengrad"], geo["laengengrad"]],
                 tooltip=marker_text,
+                icon=folium.Icon(color="blue", icon="cloud", prefix="fa"),
             ).add_to(karte)
         else:
             # Zeitregler ueber die kommenden Stunden
@@ -339,6 +357,42 @@ if st.session_state.get("radar_gewaehlt"):
             )
             aktive_stunde = kommende[stunden_labels.index(gewaehltes_label)]
             mm = aktive_stunde["niederschlag"]
+
+            # ─────────────────────────────────────
+            # FLAECHIGE DARSTELLUNG (Gitter-Vorhersage als Heatmap)
+            # Open-Meteo liefert keine Radar-Kachelbilder fuer die Zukunft.
+            # Als Ersatz holen wir die Vorhersage fuer ein Gitter aus Punkten
+            # rund um den Ort und stellen sie als weiche Heatmap dar -- das
+            # wirkt aehnlich flaechig wie das Radar bei "Vergangenheit",
+            # ist aber eine interpolierte Vorhersage, kein Kamerabild.
+            # ─────────────────────────────────────
+            with st.spinner("Lade Flächenvorhersage..."):
+                try:
+                    gitter = gitter_daten_abrufen(
+                        geo["breitengrad"], geo["laengengrad"]
+                    )
+                except RuntimeError:
+                    gitter = {}
+
+            zeit_schluessel = aktive_stunde["zeit"].strftime("%Y-%m-%dT%H:%M")
+            gitter_punkte = gitter.get(zeit_schluessel, [])
+            heat_daten = [
+                [lat, lon, wert] for lat, lon, wert in gitter_punkte if wert > 0.05
+            ]
+            if heat_daten:
+                HeatMap(
+                    heat_daten,
+                    radius=35,
+                    blur=25,
+                    min_opacity=0.15,
+                    max_zoom=7,
+                    gradient={
+                        "0.0": "#cfe3f5",
+                        "0.3": "#8fc1e8",
+                        "0.6": "#4a90d9",
+                        "1.0": "#042c53",
+                    },
+                ).add_to(karte)
 
             # ─────────────────────────────────────
             # KREIS-DARSTELLUNG nach Regenmenge
@@ -422,11 +476,13 @@ if st.session_state.get("radar_gewaehlt"):
             folium.Marker(
                 [geo["breitengrad"], geo["laengengrad"]],
                 tooltip=marker_text,
+                icon=folium.Icon(color="blue", icon="cloud", prefix="fa"),
             ).add_to(karte)
 
             karten_caption = (
                 f"Vorhersage für {gewaehltes_label} Uhr: **{mm:.1f} mm** "
-                f"({_stufe_text(mm)}) • Quelle: Open-Meteo"
+                f"({_stufe_text(mm)}) • Fläche = Gitter-Vorhersage rund um den "
+                f"Ort, keine Radaraufnahme • Quelle: Open-Meteo"
             )
 
         # Karte anzeigen. Fester key gegen Flackern.

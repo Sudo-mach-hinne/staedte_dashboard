@@ -249,6 +249,62 @@ def stuendlich_abrufen(breitengrad, laengengrad):
         )
 
 
+def gitter_niederschlag_abrufen(breitengrad, laengengrad, radius=1.5, schritte=7):
+    """
+    Holt die stündliche Niederschlagsvorhersage für ein Gitter aus Punkten
+    rund um eine Koordinate. Damit lässt sich der Niederschlag flächig statt
+    nur als Einzelwert darstellen (aehnlich einer Radarkarte), weil Open-Meteo
+    selbst keine Radar-Kachelbilder fuer die Zukunft liefert. Alle Gitterpunkte
+    werden in einem einzigen Request abgefragt (Open-Meteo erlaubt kommagetrennte
+    Koordinatenlisten).
+
+    Parameter:
+        breitengrad (float): Breitengrad des Zentrums
+        laengengrad (float): Längengrad des Zentrums
+        radius (float): Abstand der äußeren Gitterpunkte vom Zentrum in Grad
+        schritte (int): Anzahl der Gitterpunkte je Achse (schritte x schritte)
+
+    Rückgabe:
+        dict: Zeitstempel (str, z. B. "2026-07-02T15:00") -> Liste von
+            (breitengrad, laengengrad, niederschlag)-Tupeln, je ein Eintrag
+            pro Gitterpunkt
+
+    Fehler:
+        RuntimeError: Wenn Open-Meteo nicht erreichbar ist
+    """
+    lat_werte = [breitengrad + radius * (i / (schritte - 1) * 2 - 1) for i in range(schritte)]
+    lon_werte = [laengengrad + radius * (i / (schritte - 1) * 2 - 1) for i in range(schritte)]
+    lat_liste = [lat for lat in lat_werte for _ in lon_werte]
+    lon_liste = [lon for _ in lat_werte for lon in lon_werte]
+
+    params = {
+        "latitude": ",".join(str(v) for v in lat_liste),
+        "longitude": ",".join(str(v) for v in lon_liste),
+        "hourly": "precipitation",
+        "forecast_days": 2,
+        "timezone": "Europe/Berlin",
+    }
+
+    try:
+        antwort = requests.get(API_URL, params=params, timeout=API_TIMEOUT)
+        antwort.raise_for_status()
+        daten = antwort.json()
+
+        ergebnis = {}
+        for punkt in daten:
+            hourly = punkt["hourly"]
+            for zeit, mm in zip(hourly["time"], hourly["precipitation"]):
+                ergebnis.setdefault(zeit, []).append(
+                    (punkt["latitude"], punkt["longitude"], mm or 0.0)
+                )
+        return ergebnis
+
+    except Exception as fehler:
+        raise RuntimeError(
+            f"Gitter-Niederschlagsdaten konnten nicht geladen werden: {fehler}"
+        )
+
+
 def koordinaten_abrufen(stadtname, count=10):
     """
     Ruft Koordinaten für einen Stadtnamen über die Open-Meteo Geocoding API ab.
